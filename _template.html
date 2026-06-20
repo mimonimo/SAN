@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>정보보안 개념 학습앱</title>
+<style>
+  :root{
+    --bg:#eef1f8; --panel:#ffffff; --ink:#18203a; --muted:#697089; --line:#e4e8f2;
+    --brand:#4361ee; --brand2:#5c7cfa; --ok:#16a34a; --bad:#e23b3b; --warn:#f08c00;
+    --chip:#eef1fb; --radius:14px;
+    --shadow:0 1px 2px rgba(20,30,60,.06),0 8px 24px -8px rgba(30,45,90,.14);
+    --shadow-sm:0 1px 2px rgba(20,30,60,.07);
+    --grad:radial-gradient(1200px 600px at 80% -10%,rgba(67,97,238,.10),transparent 60%),radial-gradient(900px 500px at -10% 10%,rgba(124,140,250,.10),transparent 55%);
+  }
+  [data-theme="dark"]{
+    --bg:#0c1018; --panel:#161c2c; --ink:#e8ecf7; --muted:#98a1ba; --line:#28304a;
+    --brand:#6b8afd; --brand2:#86a0ff; --ok:#4ade80; --bad:#ff6b6b; --warn:#ffd43b;
+    --chip:#1f2740;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 10px 30px -10px rgba(0,0,0,.6);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.5);
+    --grad:radial-gradient(1200px 600px at 80% -10%,rgba(107,138,253,.14),transparent 60%),radial-gradient(900px 500px at -10% 10%,rgba(134,160,255,.10),transparent 55%);
+  }
+  *{box-sizing:border-box}
+  button,select,input,a{touch-action:manipulation;-webkit-tap-highlight-color:rgba(67,97,238,.15)}
+  html,body{margin:0;height:100%}
+  body{font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,-apple-system,sans-serif;
+    background:var(--bg);background-image:var(--grad);background-attachment:fixed;
+    color:var(--ink);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+  ::selection{background:color-mix(in srgb,var(--brand) 28%,transparent)}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--muted) 35%,transparent);border-radius:8px;border:2px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--muted) 55%,transparent);background-clip:content-box}
+  button{font-family:inherit;cursor:pointer}
+  .app{display:grid;grid-template-columns:260px 1fr;height:100vh}
+  .app.landing{grid-template-columns:1fr}
+  .app.landing .side{display:none}
+  /* Sidebar */
+  .side{background:color-mix(in srgb,var(--panel) 80%,transparent);backdrop-filter:saturate(140%) blur(8px);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .brand{padding:20px 18px 12px;font-weight:800;font-size:17px;letter-spacing:-.4px;display:flex;align-items:center;gap:8px}
+  .brand small{font-weight:500;color:var(--muted);font-size:12px}
+  .subjects{overflow:auto;padding:6px 10px 10px;flex:1}
+  .subj{display:block;width:100%;text-align:left;border:1px solid transparent;background:none;color:var(--ink);
+    padding:11px 12px;border-radius:11px;margin:3px 0;transition:background .15s,transform .08s,box-shadow .15s}
+  .subj:hover{background:var(--chip)}
+  .subj:active{transform:scale(.985)}
+  .subj.active{background:var(--brand);color:#fff;box-shadow:0 6px 16px -6px color-mix(in srgb,var(--brand) 70%,transparent)}
+  .subj .n{font-weight:700;font-size:14px}
+  .subj .meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .subj.active .meta{color:#e3e9ff}
+  .subj .bar{height:5px;background:var(--line);border-radius:5px;margin-top:8px;overflow:hidden}
+  .subj .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),#34d399);width:0;transition:width .4s}
+  .subj.active .bar{background:rgba(255,255,255,.28)}
+  .subj.active .bar i{background:#fff}
+  .side .foot{padding:12px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;justify-content:space-between}
+  .ghost{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:9px;padding:8px 11px;font-size:12.5px;font-weight:600;transition:.15s}
+  .ghost:hover{color:var(--brand);border-color:var(--brand);background:var(--chip)}
+  /* Main */
+  .main{display:flex;flex-direction:column;min-width:0;min-height:0}
+  .top{display:flex;gap:10px;align-items:center;padding:13px 22px;border-bottom:1px solid var(--line);
+    background:color-mix(in srgb,var(--panel) 78%,transparent);backdrop-filter:saturate(150%) blur(10px);
+    flex-wrap:wrap;position:sticky;top:0;z-index:15}
+  .h1{font-size:18px;font-weight:800;margin-right:auto;letter-spacing:-.4px}
+  .tabs{display:flex;gap:4px;background:var(--chip);padding:5px;border-radius:13px}
+  .tab{border:none;background:none;color:var(--muted);padding:8px 16px;border-radius:9px;font-weight:700;font-size:13.5px;transition:.15s}
+  .tab:hover{color:var(--ink)}
+  .tab.active{background:var(--panel);color:var(--brand);box-shadow:var(--shadow-sm)}
+  .tab.disabled{opacity:.38;pointer-events:none}
+  .search{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:11px;padding:9px 13px;width:230px;font-size:13.5px;transition:.15s}
+  .search:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 18%,transparent)}
+  .content{overflow:auto;padding:24px 22px 60px;flex:1}
+  .wrap{max-width:900px;margin:0 auto;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  /* Browse */
+  .unit{margin-bottom:26px}
+  .unit>h2{font-size:16px;font-weight:800;color:var(--brand);margin:0 0 4px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+  .section>h3{font-size:14.5px;font-weight:700;margin:18px 0 6px;color:var(--ink)}
+  .group{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:6px 18px 14px;margin:12px 0;box-shadow:var(--shadow)}
+  .group>h4{font-size:14px;font-weight:800;margin:14px 0 8px;color:var(--ink);display:flex;align-items:center;gap:8px}
+  .group>h4 .pill{font-size:11px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand2));border-radius:20px;padding:2px 9px}
+  .sub{font-size:12.5px;font-weight:700;color:var(--muted);margin:10px 0 4px}
+  .c{display:flex;gap:10px;padding:7px 0;border-top:1px dashed var(--line);align-items:flex-start}
+  .c:first-of-type{border-top:none}
+  .c .term{flex:0 0 38%;max-width:38%;font-weight:700;font-size:13.5px;color:var(--brand)}
+  .c.learned .term{color:var(--ok)}
+  .c .def{flex:1;color:var(--ink);font-size:13.5px}
+  .c .mark{flex:0 0 auto;border:none;background:none;font-size:16px;opacity:.35;padding:0 2px}
+  .c.learned .mark{opacity:1}
+  .c.learned .term{color:var(--ok)}
+  .note{background:var(--chip);border-radius:9px;padding:8px 12px;margin:8px 0;font-size:12.5px;color:var(--muted)}
+  .note::before{content:"💡 ";}
+  .meta-notes{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .meta-notes span{background:var(--chip);border-radius:20px;padding:6px 12px;font-size:12px;color:var(--muted)}
+  /* Flashcard */
+  .fc-stage{max-width:620px;margin:10px auto 0;text-align:center}
+  .fc-counter{color:var(--muted);font-size:13px;margin-bottom:10px}
+  .card{perspective:1600px;height:340px;margin:0 auto}
+  .card-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d;cursor:pointer}
+  .card.flipped .card-inner{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;background:var(--panel);border:1px solid var(--line);
+    border-radius:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:34px;gap:12px}
+  .face .tag{font-size:12px;color:var(--muted);position:absolute;top:16px;left:20px;font-weight:600}
+  .face .crumb{font-size:11.5px;color:var(--muted);position:absolute;bottom:14px;left:0;right:0}
+  .front .q{font-size:25px;font-weight:800;letter-spacing:-.5px}
+  .back{transform:rotateY(180deg)}
+  .back .q{font-size:17px;font-weight:800;color:var(--brand);margin-bottom:4px}
+  .back .a{font-size:15px;line-height:1.75}
+  .hint{color:var(--muted);font-size:12.5px}
+  .fc-actions{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+  .btn{border:none;border-radius:11px;padding:11px 18px;font-weight:700;font-size:14px;background:var(--chip);color:var(--ink);transition:transform .08s,filter .15s,box-shadow .15s}
+  .btn:hover{filter:brightness(.97)}
+  .btn:active{transform:translateY(1px) scale(.99)}
+  .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 8px 18px -8px color-mix(in srgb,var(--brand) 80%,transparent)}
+  .btn.ok{background:var(--ok);color:#fff}
+  .btn.bad{background:var(--bad);color:#fff}
+  .btn:disabled{opacity:.4;cursor:default;box-shadow:none}
+  .fc-bar{display:flex;gap:14px;justify-content:center;align-items:center;margin-top:14px;color:var(--muted);font-size:13px}
+  /* Quiz */
+  .quiz{max-width:680px;margin:0 auto}
+  .quiz-head{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap}
+  .seg{display:flex;background:var(--chip);border-radius:11px;padding:4px;gap:2px}
+  .seg button{border:none;background:none;color:var(--muted);padding:7px 13px;border-radius:8px;font-weight:600;font-size:12.5px;transition:.15s}
+  .seg button:hover{color:var(--ink)}
+  .seg button.active{background:var(--panel);color:var(--brand);box-shadow:var(--shadow-sm)}
+  .score{font-size:13px;color:var(--muted)}
+  .score b{color:var(--ink)}
+  .qcard{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:24px}
+  .qtag{font-size:12px;color:var(--brand);font-weight:700;margin-bottom:8px;letter-spacing:.02em}
+  .qtext{font-size:17.5px;font-weight:700;line-height:1.6;margin-bottom:18px}
+  .opts{display:flex;flex-direction:column;gap:10px}
+  .opt{text-align:left;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);border-radius:13px;padding:13px 15px;font-size:14px;transition:border-color .12s,background .12s,transform .08s;display:flex;gap:10px;align-items:flex-start}
+  .opt:hover{border-color:var(--brand2);background:var(--chip)}
+  .opt:active{transform:scale(.99)}
+  .opt .k{font-weight:800;color:var(--muted);flex:0 0 auto;width:18px}
+  .opt.correct{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 13%,transparent)}
+  .opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 13%,transparent)}
+  .opt.correct .k{color:var(--ok)} .opt.wrong .k{color:var(--bad)}
+  .opt:disabled{cursor:default}
+  .qfoot{display:flex;justify-content:space-between;align-items:center;margin-top:18px;gap:10px}
+  .explain{font-size:13px;color:var(--muted);flex:1}
+  .empty{text-align:center;color:var(--muted);padding:60px 20px}
+  @media (max-width:820px){
+    .app{grid-template-columns:1fr}
+    .side{display:none!important}
+    .menu-btn{display:inline-flex!important}
+    .c .term{flex-basis:46%;max-width:46%}
+  }
+  /* 모바일 (폰) */
+  @media (max-width:600px){
+    body{font-size:14px}
+    .top{padding:10px 12px;gap:8px;align-items:center}
+    .menu-btn{order:1}
+    .h1{order:2;font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .tabs{order:4;width:100%;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;justify-content:flex-start}
+    .tab{padding:8px 12px;font-size:13px;white-space:nowrap}
+    .search{order:3;width:auto;flex:0 0 auto;max-width:46vw}
+    .content{padding:14px}
+    .group{padding:4px 12px 10px}
+    .c{flex-direction:column;gap:3px;padding:9px 0}
+    .c .term,.c .def{flex-basis:auto;max-width:100%}
+    .c .term{font-size:14px}
+    .c .mark{position:absolute;right:0}
+    .c{position:relative;padding-right:26px}
+    .unit>h2{font-size:15px}
+    .match{grid-template-columns:1fr;gap:10px}
+    .card{height:300px}
+    .face{padding:22px}
+    .front .q{font-size:21px}
+    .back .a{font-size:14px}
+    .opt{padding:11px 12px;font-size:13.5px}
+    .stat-grid{grid-template-columns:1fr 1fr}
+    .exam-sticky{flex-wrap:wrap;position:static}
+    .exam-sticky .prog{flex:1 0 100%;order:-1;margin-bottom:4px}
+    .qnav{flex-wrap:wrap}
+    .qnav .btn{flex:1;min-width:0}
+    .prow{flex-wrap:wrap}
+    .prow .nm{flex:0 0 100%;margin-bottom:2px}
+    .prow .pc{flex:0 0 auto}
+    .scorebanner .pct{font-size:34px}
+    .chip{padding:7px 12px;font-size:12.5px}
+    .examinfo{font-size:11.5px}
+    .wrap{max-width:100%}
+    /* 가로 오버플로우 차단 + 퀴즈 헤더 세로 스택 */
+    html,body{overflow-x:hidden}
+    .content{overflow-x:hidden}
+    .quiz-head{flex-direction:column;align-items:stretch;gap:8px}
+    .seg{flex-wrap:wrap}
+    .typeseg{width:100%}
+    .examinfo{flex:none;width:100%;margin:0}
+    .quiz,.qcard,.opts,.opt,.exam-list,.eq,.dash{min-width:0;max-width:100%}
+    .qtext{word-break:break-word}
+    .score{font-size:12px}
+  }
+  .menu-btn{display:none;border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:8px 11px;position:relative;z-index:1001}
+  .backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20}
+  .backdrop.show{display:block}
+  /* 칩 바 (개념 카테고리 / 드릴 포맷) */
+  .chipbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
+  .chip{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:20px;padding:8px 14px;font-size:13px;font-weight:600;transition:.15s}
+  .chip:hover{border-color:var(--brand2);color:var(--ink)}
+  .chip:active{transform:scale(.97)}
+  .chip.active{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border-color:transparent;box-shadow:0 6px 14px -6px color-mix(in srgb,var(--brand) 70%,transparent)}
+  .chipgap{flex:1}
+  /* 시작(카테고리 선택) 화면 */
+  .landing{max-width:680px;margin:10px auto;padding:8px}
+  .landing h2{font-size:20px;margin:6px 0 4px}
+  .landing .lmuted{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+  .selallbtn{margin-bottom:14px}
+  .pickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .bigchip{display:flex;align-items:center;gap:10px;text-align:left;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);
+    border-radius:var(--radius);padding:16px 16px;font-size:14.5px;font-weight:600;box-shadow:var(--shadow);transition:border-color .15s,transform .08s,box-shadow .15s}
+  .bigchip:hover{border-color:var(--brand2);transform:translateY(-1px);box-shadow:0 10px 24px -10px rgba(30,45,90,.25)}
+  .bigchip:active{transform:scale(.99)}
+  .bigchip .ck{font-size:18px;color:var(--brand)}
+  .bigchip .bt{flex:1}
+  .bigchip small{color:var(--muted);font-weight:600}
+  .bigchip.on{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 9%,transparent);box-shadow:0 8px 20px -10px color-mix(in srgb,var(--brand) 55%,transparent)}
+  .biggo{margin-top:20px;width:100%;padding:16px;font-size:15.5px}
+  .landing h2{font-size:23px;letter-spacing:-.5px}
+  .opt.sel{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,transparent)}
+  .subj.selall{background:var(--chip);margin-bottom:8px}
+  .subj.selall.active{background:color-mix(in srgb,var(--brand) 16%,transparent);color:var(--ink)}
+  /* 다과목 읽기 블록 */
+  .subjblock{margin-bottom:26px}
+  .subjh{font-size:17px;font-weight:800;color:var(--brand);background:var(--chip);border-radius:10px;padding:10px 14px;margin-bottom:12px}
+  /* 퀴즈 카운터/내비 */
+  .qcounter{text-align:center;color:var(--muted);font-size:13px;margin:14px 0 10px}
+  .qcounter b{color:var(--brand);font-size:15px}
+  .qnav{display:flex;gap:10px;justify-content:center;align-items:center}
+  .qnav .btn{min-width:96px}
+  /* 퀴즈 확장 */
+  .typeseg{margin:12px 0 6px;flex-wrap:wrap}
+  .examinfo{font-size:12px;color:var(--muted);background:var(--chip);border-radius:8px;padding:7px 11px;margin-bottom:14px}
+  .oxopts{flex-direction:row;gap:12px}
+  .oxopts .opt{justify-content:center;font-weight:700;font-size:16px}
+  .match{display:grid;grid-template-columns:1fr 1.4fr;gap:14px}
+  .mcol{display:flex;flex-direction:column;gap:8px}
+  .mhead{font-size:12px;font-weight:700;color:var(--muted)}
+  .mrow{display:flex;gap:8px;align-items:flex-start;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px}
+  .mnum{font-weight:800;color:var(--brand)}
+  .mkey{font-weight:800;color:var(--brand)}
+  .mterm{flex:1;font-weight:700}
+  .mrow select{border:1px solid var(--line);border-radius:7px;padding:3px 6px;background:var(--panel);color:var(--ink)}
+  .mres{font-weight:700}
+  .shortbox{display:flex;gap:8px;margin-top:6px}
+  .shortin{flex:1}
+  .bank{display:flex;flex-wrap:wrap;gap:8px}
+  .bankopt{flex:0 0 auto}
+  /* 플래시카드 서브모드 */
+  .fc-modebar{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  /* 모의고사 */
+  .exam-setup{max-width:560px;margin:20px auto;text-align:center}
+  .exam-setup .card-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:26px}
+  .opt-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0}
+  .exam-list{max-width:820px;margin:0 auto}
+  .exam-sticky{position:sticky;top:0;z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow);padding:12px 16px;display:flex;gap:12px;align-items:center;margin-bottom:14px}
+  .exam-sticky .prog{flex:1;color:var(--muted);font-size:13px}
+  .exam-sticky .big{font-size:18px;font-weight:800}
+  .eq{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
+  .eq .qno{font-size:12px;font-weight:800;color:var(--brand);margin-bottom:6px}
+  .eq .qno .badge{background:var(--chip);color:var(--muted);border-radius:20px;padding:2px 9px;margin-left:6px;font-weight:700}
+  .eq.correct{border-color:var(--ok)} .eq.wrong{border-color:var(--bad)}
+  .review-flag{font-weight:800;margin-left:8px}
+  .scorebanner{text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:24px;margin-bottom:18px}
+  .scorebanner .pct{font-size:42px;font-weight:800}
+  .scorebanner .pf{font-size:14px;font-weight:700;border-radius:20px;padding:4px 14px;display:inline-block;margin-top:8px}
+  .pass{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+  .fail{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+  /* 대시보드 */
+  .dash{max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+  .stat .lbl{font-size:12px;color:var(--muted);font-weight:600}
+  .stat .val{font-size:28px;font-weight:800;margin-top:4px;background:linear-gradient(135deg,var(--brand),var(--brand2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .stat .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .panel-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+  .panel-box h3{margin:0 0 12px;font-size:15px}
+  .prow{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:13px}
+  .prow .nm{flex:0 0 130px;font-weight:600}
+  .prow .bar2{flex:1;height:8px;background:var(--line);border-radius:6px;overflow:hidden}
+  .prow .bar2 i{display:block;height:100%;background:var(--brand)}
+  .prow .pc{flex:0 0 70px;text-align:right;color:var(--muted)}
+  .hist{font-size:13px}
+  .hist .hrow{display:flex;justify-content:space-between;padding:7px 0;border-top:1px dashed var(--line)}
+  .hist .hrow:first-child{border-top:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side">
+    <div class="brand">📚 정보보안 학습 <small>NCS 개념</small></div>
+    <div class="subjects" id="subjects"></div>
+    <div class="foot">
+      <button class="ghost" id="themeBtn">🌙 다크</button>
+      <button class="ghost" id="resetBtn">진도 초기화</button>
+    </div>
+  </aside>
+  <div class="backdrop" id="backdrop"></div>
+  <main class="main">
+    <div class="top">
+      <button class="menu-btn" id="menuBtn">📚 과목</button>
+      <div class="h1" id="subjTitle">과목을 선택하세요</div>
+      <div class="tabs">
+        <button class="tab active" data-mode="concept">📖 개념</button>
+        <button class="tab" data-mode="drill">🎯 드릴존</button>
+        <button class="tab" data-mode="dash">📊 진도</button>
+      </div>
+      <input class="search" id="search" placeholder="🔍 개념·용어 검색">
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<script>
+const STUDY_DATA = __STUDY_DATA__;
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const state={sel:[],catFilter:-1,mode:"landing",drill:"flash",query:""};
+function selIdx(){return state.sel.slice().sort((a,b)=>a-b);}
+function selSig(){return selIdx().join(',');}
+
+/* ---------- 개념 평탄화 & 진도 ---------- */
+function conceptsOf(si){
+  const out=[]; const s=STUDY_DATA.subjects[si];
+  s.units.forEach((u,ui)=>u.sections.forEach((sec,xi)=>sec.groups.forEach((g,gi)=>g.items.forEach(it=>{
+    if(it.t==="c") out.push({term:it.term,def:it.def,sub:it.sub,unit:u.title,sec:sec.title,group:g.title,
+      id:s.id+"|"+ui+"|"+xi+"|"+gi+"|"+it.term});
+  }))));
+  return out;
+}
+const PKEY="secstudy_progress_v1";
+let progress=JSON.parse(localStorage.getItem(PKEY)||"{}");
+const saveP=()=>localStorage.setItem(PKEY,JSON.stringify(progress));
+const isLearned=id=>!!progress[id];
+function toggleLearned(id){progress[id]?delete progress[id]:progress[id]=1;saveP();}
+/* 학습 통계 */
+const SKEY="secstudy_stats_v1";
+let stats=JSON.parse(localStorage.getItem(SKEY)||"null")||{};
+stats.practice=stats.practice||{total:0,correct:0};
+stats.flashq=stats.flashq||{total:0,correct:0};
+stats.exams=stats.exams||[];
+const saveS=()=>localStorage.setItem(SKEY,JSON.stringify(stats));
+function recPractice(ok){stats.practice.total++;if(ok)stats.practice.correct++;saveS();}
+function recFlash(ok){stats.flashq.total++;if(ok)stats.flashq.correct++;saveS();}
+function recExam(rec){stats.exams.unshift(rec);stats.exams=stats.exams.slice(0,20);saveS();}
+
+/* ---------- 사이드바 (카테고리 다중선택) ---------- */
+function renderSubjects(){
+  const N=STUDY_DATA.subjects.length, allSel=state.sel.length===N;
+  const header=`<button class="subj selall ${allSel?'active':''}" id="selAll">
+    <div class="n">${allSel?'☑ 전체 해제':'☐ 전체 선택'}</div>
+    <div class="meta">${state.sel.length} / ${N}개 과목 선택됨</div></button>`;
+  $("#subjects").innerHTML=header+STUDY_DATA.subjects.map((s,i)=>{
+    const cs=conceptsOf(i); const done=cs.filter(c=>isLearned(c.id)).length;
+    const pct=cs.length?Math.round(done/cs.length*100):0; const on=state.sel.includes(i);
+    return `<button class="subj ${on?'active':''}" data-i="${i}">
+      <div class="n">${on?'☑':'☐'} ${s.title}</div>
+      <div class="meta">개념 ${cs.length}개 · 학습 ${done} (${pct}%)</div>
+      <div class="bar"><i style="width:${pct}%"></i></div></button>`;
+  }).join("");
+  $("#selAll").onclick=()=>{state.sel=allSel?[]:STUDY_DATA.subjects.map((_,i)=>i);onSelChange();};
+  $$(".subj[data-i]").forEach(b=>b.onclick=()=>{const i=+b.dataset.i,k=state.sel.indexOf(i);if(k>=0)state.sel.splice(k,1);else state.sel.push(i);onSelChange();});
+}
+function onSelChange(){
+  state.catFilter=-1; resetQuiz(); exam.started=false; fc.subj="";
+  if(state.sel.length && !["concept","drill","dash"].includes(state.mode)) state.mode="concept";
+  state.query=""; const sb=$("#search"); if(sb)sb.value="";
+  render();
+}
+
+/* ---------- 렌더 라우터 ---------- */
+function render(){
+  renderSubjects();
+  const noSel=state.sel.length===0;
+  const isLanding=noSel||state.mode==="landing";
+  document.querySelector(".app").classList.toggle("landing",isLanding);
+  $$(".tab").forEach(t=>{t.classList.toggle("active",!noSel&&t.dataset.mode===state.mode);t.classList.toggle("disabled",noSel);});
+  if(isLanding){ renderLanding(noSel); return; }
+  $("#subjTitle").textContent = state.sel.length===1?STUDY_DATA.subjects[state.sel[0]].title:`${state.sel.length}개 과목 선택`;
+  if(state.mode==="concept"){
+    $("#content").innerHTML='<div class="wrap"><div id="catbar"></div><div id="view"></div></div>';
+    renderCatBar(); renderBrowse();
+  }else if(state.mode==="drill"){
+    $("#content").innerHTML='<div class="wrap"><div id="drillbar"></div><div id="view"></div></div>';
+    renderDrillBar(); renderDrill();
+  }else{
+    $("#content").innerHTML='<div class="wrap"><div id="view"></div></div>';
+    renderDash();
+  }
+}
+function renderLanding(noSel){
+  $("#subjTitle").textContent="카테고리 선택";
+  const allSel=state.sel.length===STUDY_DATA.subjects.length;
+  const chips=STUDY_DATA.subjects.map((s,i)=>{const on=state.sel.includes(i),cs=conceptsOf(i);
+    return `<button class="bigchip ${on?'on':''}" data-pick="${i}"><span class="ck">${on?'☑':'☐'}</span> <span class="bt">${esc(s.title)}</span> <small>${cs.length}개</small></button>`;}).join("");
+  $("#content").innerHTML=`<div class="wrap"><div class="landing">
+    <h2>학습할 카테고리(과목)를 선택하세요</h2>
+    <p class="lmuted">여러 개 선택할 수 있어요. 선택한 과목들로 개념·드릴존·모의고사가 구성됩니다.</p>
+    <button class="chip selallbtn ${allSel?'active':''}" id="lAll">${allSel?'☑ 전체 해제':'☐ 전체 선택'}</button>
+    <div class="pickgrid">${chips}</div>
+    <button class="btn primary biggo" id="goStudy" ${noSel?'disabled':''}>선택 완료 · 학습 시작${state.sel.length?` (${state.sel.length}과목)`:''} →</button>
+    <div style="text-align:center;color:var(--muted);font-size:11px;margin-top:14px">정보보안 학습앱 v3 · 모바일 지원</div>
+  </div></div>`;
+  $$("[data-pick]").forEach(b=>b.onclick=()=>{const i=+b.dataset.pick,k=state.sel.indexOf(i);if(k>=0)state.sel.splice(k,1);else state.sel.push(i);render();});
+  $("#lAll").onclick=()=>{state.sel=allSel?[]:STUDY_DATA.subjects.map((_,i)=>i);render();};
+  $("#goStudy").onclick=()=>{if(state.sel.length){state.mode="concept";state.catFilter=-1;closeSide();render();}};
+}
+function poolByScope(){let a=[];selIdx().forEach(i=>a=a.concat(conceptsOf(i)));return a;}
+/* 개념 카테고리 칩 (선택 과목이 2개 이상일 때 과목 필터) */
+function renderCatBar(){
+  const ids=selIdx();
+  if(ids.length<=1){$("#catbar").innerHTML="";return;}
+  const chips=[`<button class="chip ${state.catFilter===-1?'active':''}" data-cf="-1">전체 보기</button>`]
+    .concat(ids.map(i=>`<button class="chip ${state.catFilter===i?'active':''}" data-cf="${i}">${esc(STUDY_DATA.subjects[i].title)}</button>`));
+  $("#catbar").innerHTML=`<div class="chipbar">${chips.join("")}</div>`;
+  $$("#catbar .chip").forEach(b=>b.onclick=()=>{state.catFilter=+b.dataset.cf;renderCatBar();renderBrowse();});
+}
+/* 드릴존 툴바 (범위는 좌측 카테고리 선택으로 결정) */
+const DRILLS=[["flash","🃏 플래시카드형"],["q1","📝 1차 문제형"],["q2","🧩 2차 문제형"],["mock","🧪 모의고사"]];
+function renderDrillBar(){
+  $("#drillbar").innerHTML=`<div class="chipbar">
+    ${DRILLS.map(d=>`<button class="chip ${state.drill===d[0]?'active':''}" data-d="${d[0]}">${d[1]}</button>`).join("")}
+    <span class="chipgap"></span>
+    <span class="chip" style="pointer-events:none;background:var(--chip);color:var(--muted)">${selIdx().length}개 과목 · 개념 ${poolByScope().length}개</span></div>`;
+  $$("#drillbar [data-d]").forEach(b=>b.onclick=()=>{state.drill=b.dataset.d;exam.started=false;renderDrillBar();renderDrill();});
+}
+function renderDrill(){
+  if(state.drill==="flash") renderCard();
+  else if(state.drill==="q1"){quiz.exam="1";renderQuiz();}
+  else if(state.drill==="q2"){quiz.exam="2";renderQuiz();}
+  else renderExam();
+}
+
+/* ---------- 읽기 ---------- */
+function hl(text){ if(!state.query)return esc(text);
+  const re=new RegExp("("+state.query.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi");
+  return esc(text).replace(re,'<mark>$1</mark>'); }
+function esc(t){return t.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+function renderBrowse(){
+  const q=state.query.toLowerCase();
+  const match=(a,b)=>!q||(a+ " "+b).toLowerCase().includes(q);
+  const ids=(state.catFilter>=0&&state.sel.includes(state.catFilter))?[state.catFilter]:selIdx();
+  const multi=selIdx().length>1;
+  let html="";
+  ids.forEach(si=>{
+    const s=STUDY_DATA.subjects[si]; let shtml="";
+    if(s.notes.length && !q && !multi) shtml+=`<div class="meta-notes">${s.notes.map(n=>`<span>${esc(n)}</span>`).join("")}</div>`;
+    s.units.forEach((u,ui)=>{
+      let usec="";
+      u.sections.forEach((sec,xi)=>{
+        let grp="";
+        sec.groups.forEach((g,gi)=>{
+          let cur="",rows="",cnt=0;
+          g.items.forEach(it=>{
+            if(it.t==="n"){ if(!q) rows+=`<div class="note">${esc(it.text)}</div>`; return; }
+            if(!match(it.term,it.def)) return; cnt++;
+            if(it.sub && it.sub!==cur){cur=it.sub;rows+=`<div class="sub">${esc(it.sub)}</div>`;}
+            const id=s.id+"|"+ui+"|"+xi+"|"+gi+"|"+it.term;
+            rows+=`<div class="c ${isLearned(id)?'learned':''}" data-id="${id}">
+              <button class="mark" title="학습 표시">${isLearned(id)?'✅':'⬜'}</button>
+              <div class="term">${hl(it.term)}</div><div class="def">${hl(it.def)}</div></div>`;
+          });
+          if(rows.trim()) grp+=`<div class="group"><h4>${esc(g.title)||'개념'} <span class="pill">${cnt}</span></h4>${rows}</div>`;
+        });
+        if(grp) usec+=`<div class="section">${sec.title?`<h3>${esc(sec.title)}</h3>`:""}${grp}</div>`;
+      });
+      if(usec) shtml+=`<div class="unit"><h2>${esc(u.title)}</h2>${usec}</div>`;
+    });
+    if(shtml) html+= multi?`<div class="subjblock"><div class="subjh">📁 ${esc(s.title)}</div>${shtml}</div>`:shtml;
+  });
+  $("#view").innerHTML=html||'<div class="empty">검색 결과가 없습니다.</div>';
+  $$(".c .mark").forEach(b=>b.onclick=e=>{e.stopPropagation();const c=b.closest(".c");toggleLearned(c.dataset.id);
+    c.classList.toggle("learned");b.textContent=c.classList.contains("learned")?'✅':'⬜';renderSubjects();});
+}
+
+/* ---------- 플래시카드 (암기용 / 퀴즈용) ---------- */
+let fc={mode:"memo",dir:"t2d",deck:[],pos:0,flip:false,subj:"",ses:{ok:0,total:0}};
+function buildDeck(){fc.deck=shuffle(poolByScope());fc.pos=0;fc.flip=false;fc.subj=selSig();fc.ses={ok:0,total:0};}
+function renderCard(){
+  const cs=poolByScope();
+  if(!cs.length){$("#view").innerHTML='<div class="empty">개념이 없습니다.</div>';return;}
+  if(!fc.deck.length||fc.subj!==selSig()) buildDeck();
+  const c=fc.deck[fc.pos]; const done=cs.filter(x=>isLearned(x.id)).length;
+  const memo=fc.mode==="memo";
+  const frontTag=memo?"용어":(fc.dir==="t2d"?"용어 (정의를 떠올리세요)":"정의 (용어를 떠올리세요)");
+  const frontMain=memo?c.term:(fc.dir==="t2d"?c.term:c.def);
+  const backInner=`<div class="q">${esc(c.term)}</div><div class="a">${esc(c.def)}</div><div class="crumb">${esc(c.unit)} · ${esc(c.sec)}</div>`;
+  const modebar=`<div class="fc-modebar">
+    <div class="seg"><button data-fcm="memo" class="${memo?'active':''}">📖 암기용</button><button data-fcm="quiz" class="${!memo?'active':''}">🎯 퀴즈용</button></div>
+    ${!memo?`<div class="seg"><button data-fcd="t2d" class="${fc.dir==='t2d'?'active':''}">용어→정의</button><button data-fcd="d2t" class="${fc.dir==='d2t'?'active':''}">정의→용어</button></div>`:""}
+  </div>`;
+  const counter=`<div class="fc-counter">${fc.pos+1} / ${fc.deck.length} · 암기표시 ${done}/${cs.length}${memo?"":` · 이번 세션 ${fc.ses.ok}/${fc.ses.total}`}</div>`;
+  let actions;
+  if(memo){
+    actions=`<div class="fc-actions">
+      <button class="btn" id="prev">← 이전</button>
+      <button class="btn ${isLearned(c.id)?'ok':''}" id="learn">${isLearned(c.id)?'✅ 외움':'외움 표시'}</button>
+      <button class="btn primary" id="next">다음 →</button></div>`;
+  }else{
+    actions=`<div class="fc-actions" id="qactions">${fc.flip
+      ? `<button class="btn bad" id="wrong">✘ 틀림</button><button class="btn ok" id="rightq">✔ 맞음</button>`
+      : `<button class="btn primary" id="reveal">정답 확인 (스페이스)</button>`}</div>`;
+  }
+  $("#view").innerHTML=`<div class="fc-stage">${modebar}${counter}
+    <div class="card ${fc.flip?'flipped':''}" id="card">
+      <div class="card-inner">
+        <div class="face front"><div class="tag">${frontTag}</div>
+          <div class="q">${esc(frontMain)}</div><div class="hint">${memo?'카드를 클릭하면 정의가 보입니다':'생각한 뒤 카드를 클릭/스페이스로 확인'}</div>
+          <div class="crumb">${esc(c.sub||c.group)}</div></div>
+        <div class="face back"><div class="tag">정답</div>${backInner}</div>
+      </div></div>
+    ${actions}
+    <div class="fc-bar"><button class="btn" id="reshuffle">🔀 다시 섞기</button>
+      <span>${memo?'스페이스=뒤집기 · ←/→ 이동':'스페이스=확인 · 맞음/틀림으로 채점'}</span></div></div>`;
+  $("#card").onclick=()=>{fc.flip=!fc.flip;$("#card").classList.toggle("flipped");if(!memo&&fc.flip)renderCard();};
+  $("#reshuffle").onclick=()=>{buildDeck();renderCard();};
+  if(memo){
+    $("#prev").onclick=()=>{fc.pos=(fc.pos-1+fc.deck.length)%fc.deck.length;fc.flip=false;renderCard();};
+    $("#next").onclick=()=>{fc.pos=(fc.pos+1)%fc.deck.length;fc.flip=false;renderCard();};
+    $("#learn").onclick=()=>{toggleLearned(c.id);renderCard();renderSubjects();};
+  }else{
+    const rev=$("#reveal"); if(rev)rev.onclick=()=>{fc.flip=true;renderCard();};
+    const grade=ok=>{fc.ses.total++;if(ok){fc.ses.ok++;}else{fc.deck.push(c);} recFlash(ok);
+      fc.pos++; if(fc.pos>=fc.deck.length)fc.pos=0; fc.flip=false; renderCard();};
+    const rg=$("#rightq"); if(rg)rg.onclick=()=>grade(true);
+    const wr=$("#wrong"); if(wr)wr.onclick=()=>grade(false);
+  }
+  $$("[data-fcm]").forEach(b=>b.onclick=()=>{fc.mode=b.dataset.fcm;fc.flip=false;buildDeck();renderCard();});
+  $$("[data-fcd]").forEach(b=>b.onclick=()=>{fc.dir=b.dataset.fcd;fc.flip=false;renderCard();});
+}
+
+/* ---------- 퀴즈 (정보보안산업기사 1차/2차 대비) ---------- */
+/* 모든 문항은 개념정리(폴더 자료)의 용어·정의를 '그대로' 사용해 생성한다. */
+const EXAMS={
+  "1":{name:"1차 (필기·객관식/주관식)",
+    types:[["mc_d2t","4지택일·설명→용어"],["mc_t2d","4지택일·용어→정의"],["ox","진위형 O/X"],["match","연결형"],["short","단답형"]],
+    info:"1차: 객관식 30(4지택일·진위형·연결형) + 주관식 10(단답형·계산형) / 90분 / 40%"},
+  "2":{name:"2차 (실기·필답형)",
+    types:[["short","단답형(서술 입력)"],["bank","보기 골라쓰기"],["fill","괄호 채우기"]],
+    info:"2차: 필답형 20문항 / 90분 / 60% — 설명에 해당하는 용어를 직접 쓰거나 보기에서 선택"}
+};
+let quiz={exam:"1",type:"mc_d2t",len:10,set:[],idx:0,summary:false,_sig:""};
+const QUIZ_LENS=[10,20,30];
+function quizPool(){return poolByScope();}
+function resetQuiz(){quiz.set=[];quiz.idx=0;quiz.summary=false;quiz._sig="";}
+function qsig(){return quiz.exam+"|"+quiz.type+"|"+selSig()+"|"+quiz.len;}
+function pick(pool,n,exclude){return shuffle(pool.filter(c=>!exclude||(c.term!==exclude.term&&c.def!==exclude.def))).slice(0,n);}
+function makeQ(type,c,pool){
+  if(type==="match"){const set=pick(pool,4);return{type,kind:"match",set,order:shuffle(set.map((_,i)=>i)),sel:{},done:false};}
+  if(type==="ox"){const t=Math.random()<0.5;let shown=c;if(!t){const o=pick(pool,1,c)[0];shown={term:c.term,def:o.def};}return{type,kind:"ox",concept:c,shown,isTrue:t,done:false};}
+  if(type==="bank"){const opts=shuffle([c,...pick(pool,9,c)]);return{type,kind:"bank",concept:c,options:opts,answer:opts.indexOf(c),done:false};}
+  if(type==="short"||type==="fill"){return{type,kind:"short",concept:c,done:false};}
+  const opts=shuffle([c,...pick(pool,3,c)]);return{type,kind:"mc",concept:c,options:opts,answer:opts.indexOf(c),done:false};
+}
+function genSet(){
+  const pool=quizPool(), uniq=shuffle(pool); quiz.set=[]; quiz.idx=0; quiz.summary=false;
+  for(let i=0;i<quiz.len;i++){quiz.set.push(makeQ(quiz.type,uniq[i%uniq.length],pool));}
+  quiz._sig=qsig();
+}
+function quizScore(){const d=quiz.set.filter(q=>q.done);return{answered:d.length,correct:d.filter(q=>q.correct).length};}
+function renderQuiz(){
+  const pool=quizPool();
+  const ex=EXAMS[quiz.exam];
+  if(!ex.types.some(t=>t[0]===quiz.type)) quiz.type=ex.types[0][0];
+  const need = quiz.type==="match"?4:(quiz.type==="bank"||quiz.type==="fill"?6:(quiz.type==="short"?1:4));
+  const head=`<div class="quiz-head">
+    <div class="seg typeseg">${ex.types.map(t=>`<button data-type="${t[0]}" class="${quiz.type===t[0]?'active':''}">${t[1]}</button>`).join("")}</div></div>
+    <div class="quiz-head"><div class="seg">${QUIZ_LENS.map(n=>`<button data-len="${n}" class="${quiz.len===n?'active':''}">${n}문항</button>`).join("")}</div>
+    <div class="examinfo" style="margin:0;flex:1">📋 ${ex.info}</div></div>`;
+  if(pool.length<need){
+    $("#view").innerHTML=`<div class="quiz">${head}<div class="empty">이 유형에는 개념이 ${need}개 이상 필요합니다. 좌측에서 과목을 더 선택하세요.</div></div>`;
+    bindQuizControls();return;
+  }
+  if(quiz._sig!==qsig()||!quiz.set.length) genSet();
+  if(quiz.summary){ renderQuizSummary(head); return; }
+  const q=quiz.set[quiz.idx], sc=quizScore();
+  let body="";
+  if(q.kind==="mc") body=qMC(q);
+  else if(q.kind==="ox") body=qOX(q);
+  else if(q.kind==="match") body=qMatch(q);
+  else if(q.kind==="short") body=qShort(q);
+  else if(q.kind==="bank") body=qBank(q);
+  const counter=`<div class="qcounter">문항 <b>${quiz.idx+1}</b> / ${quiz.len} · 정답 ${sc.correct}/${sc.answered}</div>`;
+  const nav=`<div class="qnav">
+    <button class="btn" id="qprev" ${quiz.idx===0?'disabled':''}>← 이전</button>
+    <button class="btn" id="newset">🔀 새 세트</button>
+    <button class="btn primary" id="qnext">${quiz.idx===quiz.len-1?'결과 보기 →':'다음 →'}</button></div>`;
+  $("#view").innerHTML=`<div class="quiz">${head}<div class="qcard">${body}
+    <div class="explain" id="explain">${q.done?explainHTML(q):''}</div></div>${counter}${nav}</div>`;
+  bindQuizControls(); bindQ(q); bindNav();
+}
+function renderQuizSummary(head){
+  const sc=quizScore(), pct=quiz.len?Math.round(sc.correct/quiz.len*100):0, pass=pct>=60;
+  $("#view").innerHTML=`<div class="quiz">${head}
+    <div class="scorebanner"><div class="pct" style="color:${pass?'var(--ok)':'var(--bad)'}">${pct}점</div>
+      <div>${sc.correct} / ${quiz.len} 정답 (응답 ${sc.answered})</div>
+      <div class="pf ${pass?'pass':'fail'}">${pass?'✅ 60점 이상':'❌ 60점 미만'}</div></div>
+    <div class="qnav"><button class="btn" id="reviewset">← 문제 다시 보기</button><button class="btn primary" id="newset">🔀 새 세트 시작</button></div></div>`;
+  bindQuizControls();
+  $("#reviewset").onclick=()=>{quiz.summary=false;quiz.idx=0;renderQuiz();};
+  $("#newset").onclick=()=>{genSet();renderQuiz();};
+}
+function bindQuizControls(){
+  $$("[data-type]").forEach(b=>b.onclick=()=>{quiz.type=b.dataset.type;resetQuiz();renderQuiz();});
+  $$("[data-len]").forEach(b=>b.onclick=()=>{quiz.len=+b.dataset.len;resetQuiz();renderQuiz();});
+}
+function bindNav(){
+  const p=$("#qprev"),n=$("#qnext"),ns=$("#newset");
+  if(p)p.onclick=()=>{if(quiz.idx>0){quiz.idx--;renderQuiz();}};
+  if(n)n.onclick=()=>{if(quiz.idx<quiz.len-1){quiz.idx++;renderQuiz();}else{quiz.summary=true;renderQuiz();}};
+  if(ns)ns.onclick=()=>{genSet();renderQuiz();};
+}
+function explainHTML(q){
+  const c=q.concept;
+  if(q.kind==="match") return q.correct?'✅ 모두 정답!':'❌ 일부 오답 — 오른쪽 정답 번호를 확인하세요.';
+  if(q.kind==="ox") return (q.correct?'✅ 정답! ':'❌ 오답. ')+(q.isTrue?`옳은 설명: <b>${esc(c.term)}</b> — ${esc(c.def)}`:`틀린 설명. <b>${esc(q.shown.term)}</b>의 올바른 정의: ${esc(c.def)}`);
+  return (q.correct?'✅ 정답! ':'❌ 오답. ')+`<b>${esc(c.term)}</b> — ${esc(c.def)}`;
+}
+/* --- 문항 뷰 (q.done이면 채점 결과 표시) --- */
+function qMC(q){
+  const d2t=q.type==="mc_d2t";
+  const opts=q.options.map((o,i)=>{let cls="opt";
+    if(q.done){if(i===q.answer)cls+=" correct";else if(i===q.chosen)cls+=" wrong";}
+    return `<button class="${cls}" data-i="${i}" ${q.done?'disabled':''}><span class="k">${"ABCDEFGH"[i]}</span><span>${esc(d2t?o.term:o.def)}</span></button>`;}).join("");
+  const prompt=d2t?`<div class="qtag">다음 설명에 해당하는 용어는?</div><div class="qtext">${esc(q.concept.def)}</div>`
+    :`<div class="qtag">다음 용어의 올바른 정의는?</div><div class="qtext">${esc(q.concept.term)}</div>`;
+  return prompt+`<div class="opts">${opts}</div>`;
+}
+function qBank(q){
+  const opts=q.options.map((o,i)=>{let cls="opt bankopt";
+    if(q.done){if(i===q.answer)cls+=" correct";else if(i===q.chosen)cls+=" wrong";}
+    return `<button class="${cls}" data-i="${i}" ${q.done?'disabled':''}>${esc(o.term)}</button>`;}).join("");
+  return `<div class="qtag">다음 설명에 해당하는 용어를 보기에서 고르시오.</div><div class="qtext">${esc(q.concept.def)}</div><div class="bank">${opts}</div>`;
+}
+function qOX(q){
+  const mk=v=>{let cls="opt ox";
+    if(q.done){if((v===1)===q.isTrue)cls+=" correct";else if(q.chosen===v)cls+=" wrong";}
+    return `<button class="${cls}" data-ox="${v}" ${q.done?'disabled':''}><span class="k">${v?'O':'X'}</span><span>${v?'옳음':'틀림'}</span></button>`;};
+  return `<div class="qtag">다음 설명이 옳으면 O, 틀리면 X.</div>
+    <div class="qtext"><b>${esc(q.shown.term)}</b> : ${esc(q.shown.def)}</div>
+    <div class="opts oxopts">${mk(1)}${mk(0)}</div>`;
+}
+function qShort(q){
+  const fill=q.type==="fill";
+  const tag=fill?"다음 설명의 빈칸에 들어갈 용어를 쓰시오.":"다음 설명에 해당하는 용어를 직접 쓰시오.";
+  const bc=q.done?(q.correct?'var(--ok)':'var(--bad)'):'var(--line)';
+  return `<div class="qtag">${tag}</div><div class="qtext">${esc(q.concept.def)}</div>
+    <div class="shortbox"><input class="search shortin" id="shortin" style="border-color:${bc}" value="${esc(q.input||'')}" placeholder="정답 용어 입력 후 Enter" ${q.done?'disabled':''} autocomplete="off">
+    <button class="btn primary" id="submitShort" ${q.done?'disabled':''}>제출</button></div>`;
+}
+function qMatch(q){
+  const rights=q.order.map((oi,n)=>`<div class="mrow"><span class="mnum">${n+1}</span><span>${esc(q.set[oi].def)}</span></div>`).join("");
+  const lefts=q.set.map((c,i)=>{
+    const opts=q.order.map((_,n)=>`<option value="${n}" ${q.sel[i]==n?'selected':''}>${n+1}</option>`).join("");
+    let res="";
+    if(q.done){const correctOrder=q.order.indexOf(i);res=(q.sel[i]===correctOrder)?'✅':'❌ → '+(correctOrder+1);}
+    return `<div class="mrow"><span class="mkey">${"㉠㉡㉢㉣"[i]}</span><span class="mterm">${esc(c.term)}</span>
+      <select data-left="${i}" ${q.done?'disabled':''}><option value="">?</option>${opts}</select>
+      <span class="mres">${res}</span></div>`;}).join("");
+  return `<div class="qtag">왼쪽 용어에 맞는 설명 번호를 선택해 연결하시오.</div>
+    <div class="match"><div class="mcol"><div class="mhead">용어</div>${lefts}</div>
+    <div class="mcol"><div class="mhead">설명</div>${rights}</div></div>
+    ${q.done?'':'<button class="btn primary" id="gradeMatch" style="margin-top:14px">채점하기</button>'}`;
+}
+/* --- 채점 바인딩 --- */
+function bindQ(q){
+  if(q.done) return;
+  if(q.kind==="mc"||q.kind==="bank"){
+    $$(".opt[data-i]").forEach(b=>b.onclick=()=>{q.done=true;q.chosen=+b.dataset.i;q.correct=(q.chosen===q.answer);recPractice(q.correct);renderQuiz();});
+  }else if(q.kind==="ox"){
+    $$("[data-ox]").forEach(b=>b.onclick=()=>{q.done=true;q.chosen=+b.dataset.ox;q.correct=((q.chosen===1)===q.isTrue);recPractice(q.correct);renderQuiz();});
+  }else if(q.kind==="short"){
+    const submit=()=>{const val=$("#shortin").value.trim();if(!val)return;q.input=val;q.done=true;q.correct=checkAnswer(val,q.concept.term);recPractice(q.correct);renderQuiz();};
+    $("#submitShort").onclick=submit;
+    $("#shortin").addEventListener("keydown",e=>{if(e.key==="Enter")submit();});
+    $("#shortin").focus();
+  }else if(q.kind==="match"){
+    $$("select[data-left]").forEach(s=>s.onchange=()=>{q.sel[+s.dataset.left]=s.value===""?undefined:+s.value;});
+    $("#gradeMatch").onclick=()=>{let allok=true;q.set.forEach((c,i)=>{if(q.sel[i]!==q.order.indexOf(i))allok=false;});q.done=true;q.correct=allok;recPractice(allok);renderQuiz();};
+  }
+}
+function checkAnswer(input,term){
+  const norm=s=>s.toLowerCase().replace(/\s+/g,'').replace(/[()\[\]{}·.,/_\-—:：]/g,'');
+  const set=new Set();
+  set.add(norm(term));
+  set.add(norm(term.replace(/\(.*?\)/g,'')));
+  const m=term.match(/\(([^)]+)\)/); if(m)set.add(norm(m[1]));
+  set.add(norm(term.split(/[(（]/)[0]));
+  return set.has(norm(input));
+}
+
+/* ---------- 모의고사 (공식 문항수 이상 생성 → 채점 → 풀이보기) ---------- */
+let exam={exam:"1",count:50,started:false,submitted:false,qs:[],ans:{},result:null};
+const EXAM_COUNTS={"1":[40,50,60],"2":[20,30,40]};
+const TYPE_LABEL={mc_d2t:"4지택일",mc_t2d:"4지택일",ox:"진위형 O/X",short:"단답형",bank:"보기선택",fill:"괄호채우기"};
+function renderExam(){
+  if(!EXAM_COUNTS[exam.exam].includes(exam.count)) exam.count=EXAM_COUNTS[exam.exam][1];
+  if(!exam.started) return renderExamSetup();
+  if(exam.submitted) return renderExamReview();
+  return renderExamSheet();
+}
+function renderExamSetup(){
+  const counts=EXAM_COUNTS[exam.exam];
+  $("#view").innerHTML=`<div class="exam-setup"><div class="card-box">
+    <h2 style="margin:0 0 6px">🧪 모의고사</h2>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 14px">개념정리 자료에서 자동 출제됩니다. 공식(1차 40·2차 20)보다 많이 풀 수 있고, 제출하면 점수와 풀이를 볼 수 있습니다.</p>
+    <div class="seg" style="display:inline-flex;margin-bottom:6px">
+      <button data-ex="1" class="${exam.exam==='1'?'active':''}">1차 모의(객관식+단답)</button>
+      <button data-ex="2" class="${exam.exam==='2'?'active':''}">2차 모의(필답형)</button></div>
+    <div class="opt-row">문항수 ${counts.map(c=>`<button class="chip ${exam.count===c?'active':''}" data-cnt="${c}">${c}문항</button>`).join("")}</div>
+    <div style="font-size:12px;color:var(--muted);margin:4px 0 14px">출제 범위: 좌측에서 선택한 ${selIdx().length}개 과목 · 개념 ${poolByScope().length}개 · 60점 이상이 합격선</div>
+    <button class="btn primary" id="startExam">시험 시작 →</button></div></div>`;
+  $$("[data-ex]").forEach(b=>b.onclick=()=>{exam.exam=b.dataset.ex;renderExam();});
+  $$("[data-cnt]").forEach(b=>b.onclick=()=>{exam.count=+b.dataset.cnt;renderExam();});
+  $("#startExam").onclick=()=>{genExam();exam.started=true;exam.submitted=false;renderExam();};
+}
+function genExam(){
+  const pool=shuffle(poolByScope());
+  const n=Math.min(exam.count,pool.length);
+  const types=exam.exam==="1"?["mc_d2t","mc_t2d","ox","short"]:["short","bank","fill"];
+  exam.qs=[];exam.ans={};
+  for(let i=0;i<n;i++){
+    const c=pool[i], type=types[i%types.length];
+    if(type==="mc_d2t"||type==="mc_t2d"){const opts=shuffle([c,...pick(pool,3,c)]);exam.qs.push({type,c,opts,ans:opts.indexOf(c)});}
+    else if(type==="ox"){const t=Math.random()<0.5;let shown=c;if(!t){const o=pick(pool,1,c)[0];shown={term:c.term,def:o.def};}exam.qs.push({type,c,shown,isTrue:t});}
+    else if(type==="bank"){const opts=shuffle([c,...pick(pool,7,c)]);exam.qs.push({type,c,opts,ans:opts.indexOf(c)});}
+    else exam.qs.push({type,c});
+  }
+}
+function gradeExamQ(q,i){
+  const a=exam.ans[i];
+  if(q.type==="ox") return a===(q.isTrue?1:0);
+  if(q.type==="short"||q.type==="fill") return a!=null&&a!==""&&checkAnswer(String(a),q.c.term);
+  return a===q.ans;
+}
+function examOpts(q,i,review,labFn){
+  return `<div class="opts">`+q.opts.map((o,oi)=>{
+    let cls="opt";
+    if(review){if(oi===q.ans)cls+=" correct";else if(exam.ans[i]===oi)cls+=" wrong";}
+    else if(exam.ans[i]===oi)cls+=" sel";
+    return `<button class="${cls}" data-eqi="${i}" data-oi="${oi}" ${review?'disabled':''}><span class="k">${"ABCDEFGH"[oi]}</span><span>${esc(labFn(o))}</span></button>`;
+  }).join("")+`</div>`;
+}
+function examOX(q,i,review){
+  const sel=exam.ans[i];
+  const mk=v=>{let cls="opt ox";
+    if(review){if((v===1)===q.isTrue)cls+=" correct";else if(sel===v)cls+=" wrong";}
+    else if(sel===v)cls+=" sel";
+    return `<button class="${cls}" data-eqi="${i}" data-ox="${v}" ${review?'disabled':''}><span class="k">${v?'O':'X'}</span></button>`;};
+  return `<div class="opts oxopts">${mk(1)}${mk(0)}</div>`;
+}
+function reviewFlag(q,i){
+  const ok=gradeExamQ(q,i), a=exam.ans[i];
+  let your;
+  if(q.type==="short"||q.type==="fill") your=(a&&a!=="")?`내 답: ${esc(String(a))}`:'미응답';
+  else if(q.type==="ox") your=(a==null)?'미응답':`내 답: ${a?'O':'X'}`;
+  else your=(a==null)?'미응답':`내 답: ${"ABCDEFGH"[a]}`;
+  return `<span class="review-flag" style="color:${ok?'var(--ok)':'var(--bad)'}">${ok?'✅':'❌'}</span> <small style="color:var(--muted)">${your}</small>`;
+}
+function examQHTML(q,i,review){
+  const no=`<div class="qno">${i+1}번 <span class="badge">${TYPE_LABEL[q.type]}</span> ${review?reviewFlag(q,i):''}</div>`;
+  let body="";
+  if(q.type==="mc_d2t") body=`<div class="qtext">${esc(q.c.def)}</div>`+examOpts(q,i,review,o=>o.term);
+  else if(q.type==="bank") body=`<div class="qtext">${esc(q.c.def)}</div>`+examOpts(q,i,review,o=>o.term);
+  else if(q.type==="mc_t2d") body=`<div class="qtext"><b>${esc(q.c.term)}</b></div>`+examOpts(q,i,review,o=>o.def);
+  else if(q.type==="ox") body=`<div class="qtext"><b>${esc(q.shown.term)}</b> : ${esc(q.shown.def)}</div>`+examOX(q,i,review);
+  else{const v=exam.ans[i]||"";body=`<div class="qtext">${esc(q.c.def)}</div><input class="search" style="width:100%;margin-top:8px" data-eqi="${i}" value="${esc(String(v))}" ${review?'disabled':''} placeholder="정답 용어 입력">`;}
+  const exp=review?`<div class="explain" style="margin-top:10px">정답: <b>${esc(q.c.term)}</b> — ${esc(q.c.def)}</div>`:"";
+  return no+body+exp;
+}
+function renderExamSheet(){
+  const answered=exam.qs.filter((q,i)=>exam.ans[i]!=null&&exam.ans[i]!=="").length;
+  const sticky=`<div class="exam-sticky"><div class="prog">진행 <b>${answered}</b> / ${exam.qs.length} · ${exam.exam}차 모의</div>
+    <button class="btn" id="cancelExam">취소</button><button class="btn primary" id="submitExam">제출 및 채점</button></div>`;
+  $("#view").innerHTML=sticky+`<div class="exam-list">${exam.qs.map((q,i)=>`<div class="eq">${examQHTML(q,i,false)}</div>`).join("")}</div>`;
+  $$('[data-oi]').forEach(b=>b.onclick=()=>{exam.ans[+b.dataset.eqi]=+b.dataset.oi;renderExamSheet();});
+  $$('[data-ox]').forEach(b=>b.onclick=()=>{exam.ans[+b.dataset.eqi]=+b.dataset.ox;renderExamSheet();});
+  $$('input[data-eqi]').forEach(inp=>inp.oninput=()=>{exam.ans[+inp.dataset.eqi]=inp.value;});
+  $("#submitExam").onclick=()=>{
+    if(answered<exam.qs.length && !confirm(`미응답 ${exam.qs.length-answered}문항이 있습니다. 제출할까요?`))return;
+    submitExam();};
+  $("#cancelExam").onclick=()=>{exam.started=false;renderExam();};
+}
+function submitExam(){
+  let correct=0; exam.qs.forEach((q,i)=>{if(gradeExamQ(q,i))correct++;});
+  exam.result={correct,total:exam.qs.length};
+  recExam({date:new Date().toISOString().slice(0,10),exam:exam.exam,scope:(selIdx().length===STUDY_DATA.subjects.length?'all':selIdx().length+'과목'),correct,total:exam.qs.length});
+  exam.submitted=true; renderExam(); $(".content").scrollTop=0;
+}
+function renderExamReview(){
+  const r=exam.result, pct=r.total?Math.round(r.correct/r.total*100):0, pass=pct>=60;
+  const banner=`<div class="scorebanner"><div class="pct" style="color:${pass?'var(--ok)':'var(--bad)'}">${pct}점</div>
+    <div>${r.correct} / ${r.total} 정답</div>
+    <div class="pf ${pass?'pass':'fail'}">${pass?'✅ 합격선(60점) 통과':'❌ 합격선(60점) 미달'}</div></div>`;
+  const list=exam.qs.map((q,i)=>`<div class="eq ${gradeExamQ(q,i)?'correct':'wrong'}">${examQHTML(q,i,true)}</div>`).join("");
+  $("#view").innerHTML=banner+`<div class="exam-list">${list}</div>
+    <div class="opt-row" style="margin:16px 0"><button class="btn primary" id="retry">새 모의고사 →</button></div>`;
+  $("#retry").onclick=()=>{exam.started=false;exam.submitted=false;renderExam();};
+}
+
+/* ---------- 진도 대시보드 ---------- */
+function poolAll(){let a=[];STUDY_DATA.subjects.forEach((s,i)=>a=a.concat(conceptsOf(i)));return a;}
+function renderDash(){
+  const all=poolAll(), total=all.length, learned=all.filter(c=>isLearned(c.id)).length;
+  const pct=total?Math.round(learned/total*100):0;
+  const pr=stats.practice, fq=stats.flashq;
+  const pacc=pr.total?Math.round(pr.correct/pr.total*100):0, facc=fq.total?Math.round(fq.correct/fq.total*100):0;
+  const cards=`<div class="stat-grid">
+    <div class="stat"><div class="lbl">전체 개념 암기</div><div class="val">${pct}%</div><div class="sub">${learned} / ${total}개</div></div>
+    <div class="stat"><div class="lbl">퀴즈 정답률</div><div class="val">${pacc}%</div><div class="sub">${pr.correct}/${pr.total} 문항</div></div>
+    <div class="stat"><div class="lbl">플래시카드(퀴즈)</div><div class="val">${facc}%</div><div class="sub">${fq.correct}/${fq.total} 문항</div></div>
+    <div class="stat"><div class="lbl">모의고사 응시</div><div class="val">${stats.exams.length}</div><div class="sub">최근 기록</div></div></div>`;
+  const subjRows=STUDY_DATA.subjects.map((s,i)=>{
+    const cs=conceptsOf(i), d=cs.filter(c=>isLearned(c.id)).length, p=cs.length?Math.round(d/cs.length*100):0;
+    return `<div class="prow"><span class="nm">${esc(s.title)}</span><span class="bar2"><i style="width:${p}%"></i></span><span class="pc">${d}/${cs.length} (${p}%)</span></div>`;
+  }).join("");
+  const hist=stats.exams.length?stats.exams.map(e=>{const p=Math.round(e.correct/e.total*100);
+    return `<div class="hrow"><span>${e.date} · ${e.exam}차 · ${e.scope==='all'?'전체':esc(String(e.scope))}</span><span><b style="color:${p>=60?'var(--ok)':'var(--bad)'}">${p}점</b> (${e.correct}/${e.total})</span></div>`;}).join("")
+    :'<div style="color:var(--muted);font-size:13px">아직 모의고사 기록이 없습니다.</div>';
+  $("#view").innerHTML=`<div class="dash">${cards}
+    <div class="panel-box"><h3>과목별 개념 암기 진도</h3>${subjRows}</div>
+    <div class="panel-box"><h3>모의고사 이력</h3><div class="hist">${hist}</div></div>
+    <div class="opt-row"><button class="btn" id="resetStats">학습 통계 초기화</button></div></div>`;
+  $("#resetStats").onclick=()=>{if(confirm('퀴즈·플래시카드·모의고사 통계를 초기화할까요? (개념 암기 표시는 유지)')){stats={practice:{total:0,correct:0},flashq:{total:0,correct:0},exams:[]};saveS();renderDash();}};
+}
+
+/* ---------- 유틸 ---------- */
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
+function closeSide(){$("#side").classList.remove("open");$("#backdrop").classList.remove("show");}
+
+/* ---------- 이벤트 ---------- */
+$$(".tab").forEach(t=>t.onclick=()=>{if(state.sel.length===0)return;state.mode=t.dataset.mode;render();});
+$("#search").oninput=e=>{state.query=e.target.value.trim();if(state.sel.length===0)return;if(state.mode!=="concept"){state.mode="concept";}render();};
+$("#menuBtn").onclick=()=>{state.mode="landing";closeSide();render();};
+$("#backdrop").onclick=closeSide;
+$("#resetBtn").onclick=()=>{if(confirm("학습 진도를 모두 초기화할까요?")){progress={};saveP();render();}};
+const THEMEKEY="secstudy_theme";
+function applyTheme(t){document.documentElement.setAttribute("data-theme",t);
+  $("#themeBtn").textContent=t==="dark"?"☀️ 라이트":"🌙 다크";localStorage.setItem(THEMEKEY,t);}
+$("#themeBtn").onclick=()=>applyTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");
+applyTheme(localStorage.getItem(THEMEKEY)||"light");
+document.addEventListener("keydown",e=>{
+  if(state.mode==="drill"&&state.drill==="flash"){
+    if(e.target.tagName==="INPUT")return;
+    if(e.code==="Space"){e.preventDefault();$("#card")?.click();}
+    else if(e.key==="ArrowLeft")$("#prev")?.click();
+    else if(e.key==="ArrowRight")$("#next")?.click();
+  }
+});
+render();
+</script>
+</body>
+</html>
