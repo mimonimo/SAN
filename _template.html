@@ -447,7 +447,7 @@ function renderBrowse(){
 }
 
 /* ---------- 플래시카드 (암기용 / 퀴즈용) ---------- */
-let fc={mode:"memo",dir:"t2d",deck:[],pos:0,flip:false,subj:"",ses:{ok:0,total:0}};
+let fc={mode:"memo",dir:"d2t",deck:[],pos:0,flip:false,subj:"",ses:{ok:0,total:0}};
 function buildDeck(){fc.deck=shuffle(poolByScope());fc.pos=0;fc.flip=false;fc.subj=selSig();fc.ses={ok:0,total:0};}
 function renderCard(){
   const cs=poolByScope();
