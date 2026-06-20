@@ -35,6 +35,10 @@
   .app{display:grid;grid-template-columns:260px 1fr;height:100vh}
   .app.landing{grid-template-columns:1fr}
   .app.landing .side{display:none}
+  .app.sidehidden{grid-template-columns:1fr}
+  .app.sidehidden .side{display:none}
+  .side-toggle{display:inline-flex;align-items:center;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:9px;padding:8px 11px;font-size:14px;transition:.15s}
+  .side-toggle:hover{color:var(--brand);border-color:var(--brand)}
   /* Sidebar */
   .side{background:color-mix(in srgb,var(--panel) 80%,transparent);backdrop-filter:saturate(140%) blur(8px);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
   .brand{padding:20px 18px 12px;font-weight:800;font-size:17px;letter-spacing:-.4px;display:flex;align-items:center;gap:8px}
@@ -44,14 +48,12 @@
     padding:11px 12px;border-radius:11px;margin:3px 0;transition:background .15s,transform .08s,box-shadow .15s}
   .subj:hover{background:var(--chip)}
   .subj:active{transform:scale(.985)}
-  .subj.active{background:var(--brand);color:#fff;box-shadow:0 6px 16px -6px color-mix(in srgb,var(--brand) 70%,transparent)}
+  .subj.active{background:color-mix(in srgb,var(--brand) 8%,transparent);box-shadow:inset 3px 0 0 var(--brand)}
+  .subj.active .n{color:var(--brand)}
   .subj .n{font-weight:700;font-size:14px}
   .subj .meta{font-size:11.5px;color:var(--muted);margin-top:2px}
-  .subj.active .meta{color:#e3e9ff}
   .subj .bar{height:5px;background:var(--line);border-radius:5px;margin-top:8px;overflow:hidden}
   .subj .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),#34d399);width:0;transition:width .4s}
-  .subj.active .bar{background:rgba(255,255,255,.28)}
-  .subj.active .bar i{background:#fff}
   .side .foot{padding:12px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;justify-content:space-between}
   .ghost{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:9px;padding:8px 11px;font-size:12.5px;font-weight:600;transition:.15s}
   .ghost:hover{color:var(--brand);border-color:var(--brand);background:var(--chip)}
@@ -143,6 +145,7 @@
     .app{grid-template-columns:1fr}
     .side{display:none!important}
     .menu-btn{display:inline-flex!important}
+    .side-toggle{display:none!important}
     .c .term{flex-basis:46%;max-width:46%}
   }
   /* 모바일 (폰) */
@@ -219,7 +222,8 @@
   .landing h2{font-size:23px;letter-spacing:-.5px}
   .opt.sel{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,transparent)}
   .subj.selall{background:var(--chip);margin-bottom:8px}
-  .subj.selall.active{background:color-mix(in srgb,var(--brand) 16%,transparent);color:var(--ink)}
+  .subj.selall.active{background:var(--chip);box-shadow:none}
+  .subj.selall.active .n{color:var(--brand)}
   /* 다과목 읽기 블록 */
   .subjblock{margin-bottom:26px}
   .subjh{font-size:17px;font-weight:800;color:var(--brand);background:var(--chip);border-radius:10px;padding:10px 14px;margin-bottom:12px}
@@ -299,6 +303,7 @@
   <div class="backdrop" id="backdrop"></div>
   <main class="main">
     <div class="top">
+      <button class="side-toggle" id="sideToggle" title="사이드바 접기/펼치기">☰</button>
       <button class="menu-btn" id="menuBtn">📚 과목</button>
       <div class="h1" id="subjTitle">과목을 선택하세요</div>
       <div class="tabs">
@@ -315,7 +320,7 @@
 <script>
 const STUDY_DATA = __STUDY_DATA__;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const state={sel:[],catFilter:-1,mode:"landing",drill:"flash",query:""};
+const state={sel:[],catFilter:-1,mode:"landing",drill:"flash",query:"",sideHidden:localStorage.getItem("secstudy_sidehidden")==="1"};
 function selIdx(){return state.sel.slice().sort((a,b)=>a-b);}
 function selSig(){return selIdx().join(',');}
 
@@ -374,6 +379,7 @@ function render(){
   const noSel=state.sel.length===0;
   const isLanding=noSel||state.mode==="landing";
   document.querySelector(".app").classList.toggle("landing",isLanding);
+  document.querySelector(".app").classList.toggle("sidehidden",state.sideHidden&&!isLanding);
   $$(".tab").forEach(t=>{t.classList.toggle("active",!noSel&&t.dataset.mode===state.mode);t.classList.toggle("disabled",noSel);});
   if(isLanding){ renderLanding(noSel); return; }
   $("#subjTitle").textContent = state.sel.length===1?STUDY_DATA.subjects[state.sel[0]].title:`${state.sel.length}개 과목 선택`;
@@ -833,6 +839,7 @@ function closeSide(){$("#side").classList.remove("open");$("#backdrop").classLis
 $$(".tab").forEach(t=>t.onclick=()=>{if(state.sel.length===0)return;state.mode=t.dataset.mode;render();});
 $("#search").oninput=e=>{state.query=e.target.value.trim();if(state.sel.length===0)return;if(state.mode!=="concept"){state.mode="concept";}render();};
 $("#menuBtn").onclick=()=>{state.mode="landing";closeSide();render();};
+$("#sideToggle").onclick=()=>{state.sideHidden=!state.sideHidden;localStorage.setItem("secstudy_sidehidden",state.sideHidden?"1":"0");render();};
 $("#backdrop").onclick=closeSide;
 $("#resetBtn").onclick=()=>{if(confirm("학습 진도를 모두 초기화할까요?")){progress={};saveP();render();}};
 const THEMEKEY="secstudy_theme";
