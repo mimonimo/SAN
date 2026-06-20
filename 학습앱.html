@@ -64,8 +64,10 @@
   .c .term{flex:0 0 38%;max-width:38%;font-weight:700;font-size:13.5px;color:var(--brand)}
   .c.learned .term{color:var(--ok)}
   .c .def{flex:1;color:var(--ink);font-size:13.5px}
-  .c .mark{flex:0 0 auto;border:none;background:none;font-size:16px;opacity:.35;padding:0 2px}
-  .c.learned .mark{opacity:1}
+  .c .mark{flex:0 0 auto;width:20px;height:20px;margin-top:1px;border:2px solid var(--line);border-radius:6px;background:var(--panel);padding:0;position:relative;transition:.15s}
+  .c .mark:hover{border-color:var(--brand)}
+  .c.learned .mark{background:var(--ok);border-color:var(--ok)}
+  .c.learned .mark::after{content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
   .c.learned .term{color:var(--ok)}
   .note{background:var(--chip);border-radius:9px;padding:8px 12px;margin:8px 0;font-size:12.5px;color:var(--muted)}
   .note::before{content:"💡 ";}
@@ -194,7 +196,10 @@
     border-radius:var(--radius);padding:15px 16px;font-size:14.5px;font-weight:600;box-shadow:var(--shadow);transition:border-color .15s,transform .08s,box-shadow .15s}
   .bigchip:hover{border-color:var(--brand2);transform:translateY(-1px);box-shadow:0 10px 24px -10px rgba(30,45,90,.25)}
   .bigchip:active{transform:scale(.99)}
-  .bigchip .ck{font-size:18px;color:var(--brand);margin-top:1px}
+  .bigchip .ck{flex:0 0 auto;width:20px;height:20px;margin-top:1px;border:2px solid var(--line);border-radius:6px;background:var(--bg);position:relative;transition:.15s}
+  .bigchip:hover .ck{border-color:var(--brand2)}
+  .bigchip.on .ck{background:var(--brand);border-color:var(--brand)}
+  .bigchip.on .ck::after{content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
   .bigchip .bt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
   .bigchip .bn{font-weight:700}
   .bigchip .bm{color:var(--muted);font-weight:600;font-size:11.5px}
@@ -346,28 +351,18 @@ function render(){
 function renderLanding(noSel){
   $("#subjTitle").textContent="과목 선택";
   const allSel=state.sel.length===STUDY_DATA.subjects.length;
-  let tot=0,td=0;
   const chips=STUDY_DATA.subjects.map((s,i)=>{
     const on=state.sel.includes(i),cs=conceptsOf(i);
     const done=cs.filter(c=>isLearned(c.id)).length;
     const pct=cs.length?Math.round(done/cs.length*100):0;
-    tot+=cs.length; td+=done;
     return `<button class="bigchip ${on?'on':''}" data-pick="${i}">
-      <span class="ck">${on?'☑':'☐'}</span>
+      <span class="ck"></span>
       <span class="bt"><span class="bn">${esc(s.title)}</span>
         <span class="bm">개념 ${cs.length}개 · 학습 ${done} (${pct}%)</span>
         <span class="bar"><i style="width:${pct}%"></i></span></span></button>`;}).join("");
-  const tpct=tot?Math.round(td/tot*100):0;
   $("#content").innerHTML=`<div class="wrap"><div class="landing">
     <h2>📚 정보보안 학습</h2>
     <p class="lmuted">학습할 과목을 선택하세요. 여러 개 선택하면 개념·드릴존·모의고사가 함께 구성됩니다.</p>
-    <div class="lsum">
-      <div class="big">${tpct}%</div>
-      <div class="mid">
-        <div class="ls">전체 진도 · 학습 <b>${td}</b> / ${tot}개 · ${STUDY_DATA.subjects.length}과목</div>
-        <div class="lbar"><i style="width:${tpct}%"></i></div>
-      </div>
-    </div>
     <button class="chip selallbtn ${allSel?'active':''}" id="lAll">${allSel?'☑ 전체 해제':'☐ 전체 선택'}</button>
     <div class="pickgrid">${chips}</div>
     <button class="btn primary biggo" id="goStudy" ${noSel?'disabled':''}>선택 완료 · 학습 시작${state.sel.length?` (${state.sel.length}과목)`:''} →</button>
@@ -430,7 +425,7 @@ function renderBrowse(){
             if(it.sub && it.sub!==cur){cur=it.sub;rows+=`<div class="sub">${esc(it.sub)}</div>`;}
             const id=s.id+"|"+ui+"|"+xi+"|"+gi+"|"+it.term;
             rows+=`<div class="c ${isLearned(id)?'learned':''}" data-id="${id}">
-              <button class="mark" title="학습 표시">${isLearned(id)?'✅':'⬜'}</button>
+              <button class="mark" title="학습 표시" aria-label="학습 표시"></button>
               <div class="term">${hl(it.term)}</div><div class="def">${hl(it.def)}</div></div>`;
           });
           if(rows.trim()) grp+=`<div class="group"><h4>${esc(g.title)||'개념'} <span class="pill">${cnt}</span></h4>${rows}</div>`;
@@ -443,7 +438,7 @@ function renderBrowse(){
   });
   $("#view").innerHTML=html||'<div class="empty">검색 결과가 없습니다.</div>';
   $$(".c .mark").forEach(b=>b.onclick=e=>{e.stopPropagation();const c=b.closest(".c");toggleLearned(c.dataset.id);
-    c.classList.toggle("learned");b.textContent=c.classList.contains("learned")?'✅':'⬜';});
+    c.classList.toggle("learned");});
 }
 
 /* ---------- 플래시카드 (암기용 / 퀴즈용) ---------- */
