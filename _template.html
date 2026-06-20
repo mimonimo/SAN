@@ -279,7 +279,6 @@
       <div class="tabs">
         <button class="tab active" data-mode="concept">📖 개념</button>
         <button class="tab" data-mode="drill">🎯 드릴존</button>
-        <button class="tab" data-mode="dash">📊 진도</button>
       </div>
       <input class="search" id="search" placeholder="🔍 개념·용어 검색">
       <button class="ghost" id="themeBtn">🌙 다크</button>
@@ -324,7 +323,7 @@ function recExam(rec){stats.exams.unshift(rec);stats.exams=stats.exams.slice(0,2
 /* ---------- 과목 선택 변경 ---------- */
 function onSelChange(){
   state.catFilter=-1; resetQuiz(); exam.started=false; fc.subj="";
-  if(state.sel.length && !["concept","drill","dash"].includes(state.mode)) state.mode="concept";
+  if(state.sel.length && !["concept","drill"].includes(state.mode)) state.mode="concept";
   state.query=""; const sb=$("#search"); if(sb)sb.value="";
   render();
 }
@@ -339,12 +338,9 @@ function render(){
   if(state.mode==="concept"){
     $("#content").innerHTML='<div class="wrap"><div id="catbar"></div><div id="view"></div></div>';
     renderCatBar(); renderBrowse();
-  }else if(state.mode==="drill"){
+  }else{
     $("#content").innerHTML='<div class="wrap"><div id="drillbar"></div><div id="view"></div></div>';
     renderDrillBar(); renderDrill();
-  }else{
-    $("#content").innerHTML='<div class="wrap"><div id="view"></div></div>';
-    renderDash();
   }
 }
 function renderLanding(noSel){
@@ -457,64 +453,81 @@ function renderCard(){
   const cs=poolByScope();
   if(!cs.length){$("#view").innerHTML='<div class="empty">개념이 없습니다.</div>';return;}
   if(!fc.deck.length||fc.subj!==selSig()) buildDeck();
-  const c=fc.deck[fc.pos]; const done=cs.filter(x=>isLearned(x.id)).length;
-  const memo=fc.mode==="memo";
-  const frontTag=memo?"용어":(fc.dir==="t2d"?"용어 (정의를 떠올리세요)":"정의 (용어를 떠올리세요)");
-  const frontMain=memo?c.term:(fc.dir==="t2d"?c.term:c.def);
-  const backInner=`<div class="q">${esc(c.term)}</div><div class="a">${esc(c.def)}</div><div class="crumb">${esc(c.unit)} · ${esc(c.sec)}</div>`;
-  const modebar=`<div class="fc-modebar">
-    <div class="seg"><button data-fcm="memo" class="${memo?'active':''}">📖 암기용</button><button data-fcm="quiz" class="${!memo?'active':''}">🎯 퀴즈용</button></div>
-    ${!memo?`<div class="seg"><button data-fcd="t2d" class="${fc.dir==='t2d'?'active':''}">용어→정의</button><button data-fcd="d2t" class="${fc.dir==='d2t'?'active':''}">정의→용어</button></div>`:""}
-  </div>`;
-  const counter=`<div class="fc-counter">${fc.pos+1} / ${fc.deck.length} · 암기표시 ${done}/${cs.length}${memo?"":` · 이번 세션 ${fc.ses.ok}/${fc.ses.total}`}</div>`;
-  let actions;
-  if(memo){
-    actions=`<div class="fc-actions">
-      <button class="btn" id="prev">← 이전</button>
-      <button class="btn ${isLearned(c.id)?'ok':''}" id="learn">${isLearned(c.id)?'✅ 외움':'외움 표시'}</button>
-      <button class="btn primary" id="next">다음 →</button></div>`;
-  }else{
-    actions=`<div class="fc-actions" id="qactions">${fc.flip
-      ? `<button class="btn bad" id="wrong">✘ 틀림</button><button class="btn ok" id="rightq">✔ 맞음</button>`
-      : `<button class="btn primary" id="reveal">정답 확인 (스페이스)</button>`}</div>`;
-  }
-  $("#view").innerHTML=`<div class="fc-stage">${modebar}${counter}
-    <div class="card ${fc.flip?'flipped':''}" id="card">
-      <div class="card-inner">
-        <div class="face front"><div class="tag">${frontTag}</div>
-          <div class="q">${esc(frontMain)}</div><div class="hint">${memo?'카드를 클릭하면 정의가 보입니다':'생각한 뒤 카드를 클릭/스페이스로 확인'}</div>
-          <div class="crumb">${esc(c.sub||c.group)}</div></div>
-        <div class="face back"><div class="tag">정답</div>${backInner}</div>
-      </div></div>
-    ${actions}
+  $("#view").innerHTML=`<div class="fc-stage">
+    <div class="fc-modebar">
+      <div class="seg"><button data-fcm="memo">📖 암기용</button><button data-fcm="quiz">🎯 퀴즈용</button></div>
+      <div class="seg"><button data-fcd="t2d">용어→정의</button><button data-fcd="d2t">정의→용어</button></div>
+    </div>
+    <div class="fc-counter" id="fcCounter"></div>
+    <div class="card" id="card"><div class="card-inner">
+      <div class="face front"><div class="tag" id="fcFTag"></div>
+        <div class="q" id="fcFront"></div><div class="hint" id="fcHint"></div>
+        <div class="crumb" id="fcFCrumb"></div></div>
+      <div class="face back"><div class="tag">정답</div>
+        <div class="q" id="fcBTerm"></div><div class="a" id="fcBDef"></div>
+        <div class="crumb" id="fcBCrumb"></div></div>
+    </div></div>
+    <div class="fc-actions" id="fcActions"></div>
     <div class="fc-bar"><button class="btn" id="reshuffle">🔀 다시 섞기</button>
-      <span>${memo?'스페이스=뒤집기 · ←/→ 이동':'스페이스=확인 · 맞음/틀림으로 채점'}</span></div></div>`;
-  $("#card").onclick=()=>{fc.flip=!fc.flip;$("#card").classList.toggle("flipped");if(!memo&&fc.flip)renderCard();};
-  $("#reshuffle").onclick=()=>{buildDeck();renderCard();};
+      <span id="fcHelp"></span></div></div>`;
+  $("#card").onclick=()=>{
+    if(fc.mode==="memo"){fc.flip=!fc.flip;$("#card").classList.toggle("flipped",fc.flip);}
+    else if(!fc.flip){fc.flip=true;$("#card").classList.toggle("flipped",true);updateActions();}
+  };
+  $("#reshuffle").onclick=()=>{buildDeck();updateCard();};
+  $$("[data-fcm]").forEach(b=>b.onclick=()=>{if(fc.mode===b.dataset.fcm)return;fc.mode=b.dataset.fcm;fc.flip=false;buildDeck();updateCard();});
+  $$("[data-fcd]").forEach(b=>b.onclick=()=>{if(fc.dir===b.dataset.fcd)return;fc.dir=b.dataset.fcd;fc.flip=false;updateCard();});
+  updateCard();
+}
+/* 카드 내용만 in-place 갱신 (전체 재렌더 없이 깜빡임 방지) */
+function updateCard(){
+  const cs=poolByScope(); if(!cs.length)return;
+  const c=fc.deck[fc.pos], memo=fc.mode==="memo", t2d=fc.dir==="t2d";
+  const done=cs.filter(x=>isLearned(x.id)).length;
+  $$("[data-fcm]").forEach(b=>b.classList.toggle("active",b.dataset.fcm===fc.mode));
+  $$("[data-fcd]").forEach(b=>b.classList.toggle("active",b.dataset.fcd===fc.dir));
+  $("#fcFTag").textContent=memo?(t2d?"용어":"정의"):(t2d?"용어 (정의를 떠올리세요)":"정의 (용어를 떠올리세요)");
+  $("#fcFront").textContent=t2d?c.term:c.def;
+  $("#fcHint").textContent=memo?(t2d?"카드를 클릭하면 정의가 보입니다":"카드를 클릭하면 용어가 보입니다"):"생각한 뒤 카드를 클릭/스페이스로 확인";
+  $("#fcFCrumb").textContent=c.sub||c.group||"";
+  $("#fcBTerm").textContent=c.term;
+  $("#fcBDef").textContent=c.def;
+  $("#fcBCrumb").textContent=`${c.unit||""} · ${c.sec||""}`;
+  $("#fcCounter").textContent=`${fc.pos+1} / ${fc.deck.length} · 암기표시 ${done}/${cs.length}`+(memo?"":` · 이번 세션 ${fc.ses.ok}/${fc.ses.total}`);
+  $("#fcHelp").textContent=memo?"스페이스=뒤집기 · ←/→ 이동":"스페이스=확인 · 맞음/틀림으로 채점";
+  $("#card").classList.toggle("flipped",fc.flip);
+  updateActions();
+}
+function updateActions(){
+  const c=fc.deck[fc.pos], memo=fc.mode==="memo", a=$("#fcActions"); if(!a)return;
   if(memo){
-    $("#prev").onclick=()=>{fc.pos=(fc.pos-1+fc.deck.length)%fc.deck.length;fc.flip=false;renderCard();};
-    $("#next").onclick=()=>{fc.pos=(fc.pos+1)%fc.deck.length;fc.flip=false;renderCard();};
-    $("#learn").onclick=()=>{toggleLearned(c.id);renderCard();};
+    a.innerHTML=`<button class="btn" id="prev">← 이전</button>`+
+      `<button class="btn ${isLearned(c.id)?'ok':''}" id="learn">${isLearned(c.id)?'✅ 외움':'외움 표시'}</button>`+
+      `<button class="btn primary" id="next">다음 →</button>`;
+    $("#prev").onclick=()=>{fc.pos=(fc.pos-1+fc.deck.length)%fc.deck.length;fc.flip=false;updateCard();};
+    $("#next").onclick=()=>{fc.pos=(fc.pos+1)%fc.deck.length;fc.flip=false;updateCard();};
+    $("#learn").onclick=()=>{toggleLearned(c.id);updateCard();};
   }else{
-    const rev=$("#reveal"); if(rev)rev.onclick=()=>{fc.flip=true;renderCard();};
+    a.innerHTML=fc.flip
+      ? `<button class="btn bad" id="wrong">✘ 틀림</button><button class="btn ok" id="rightq">✔ 맞음</button>`
+      : `<button class="btn primary" id="reveal">정답 확인 (스페이스)</button>`;
+    const rev=$("#reveal"); if(rev)rev.onclick=()=>{fc.flip=true;$("#card").classList.toggle("flipped",true);updateActions();};
     const grade=ok=>{fc.ses.total++;if(ok){fc.ses.ok++;}else{fc.deck.push(c);} recFlash(ok);
-      fc.pos++; if(fc.pos>=fc.deck.length)fc.pos=0; fc.flip=false; renderCard();};
+      fc.pos++; if(fc.pos>=fc.deck.length)fc.pos=0; fc.flip=false; updateCard();};
     const rg=$("#rightq"); if(rg)rg.onclick=()=>grade(true);
     const wr=$("#wrong"); if(wr)wr.onclick=()=>grade(false);
   }
-  $$("[data-fcm]").forEach(b=>b.onclick=()=>{fc.mode=b.dataset.fcm;fc.flip=false;buildDeck();renderCard();});
-  $$("[data-fcd]").forEach(b=>b.onclick=()=>{fc.dir=b.dataset.fcd;fc.flip=false;renderCard();});
 }
 
 /* ---------- 퀴즈 (정보보안산업기사 1차/2차 대비) ---------- */
 /* 모든 문항은 개념정리(폴더 자료)의 용어·정의를 '그대로' 사용해 생성한다. */
 const EXAMS={
   "1":{name:"1차 (필기·객관식/주관식)",
-    types:[["mc_d2t","4지택일·설명→용어"],["mc_t2d","4지택일·용어→정의"],["ox","진위형 O/X"],["match","연결형"],["short","단답형"]],
-    info:"1차: 객관식 30(4지택일·진위형·연결형) + 주관식 10(단답형·계산형) / 90분 / 40%"},
+    types:[["mc_d2t","4지택일"],["ox","진위형 O/X"],["match","연결형"],["short","단답형"]],
+    info:"1차 대비: 모든 문항은 '설명 → 용어' 방향 · 전체 개념 출제 · 합격 40%"},
   "2":{name:"2차 (실기·필답형)",
-    types:[["short","단답형(서술 입력)"],["bank","보기 골라쓰기"],["fill","괄호 채우기"]],
-    info:"2차: 필답형 20문항 / 90분 / 60% — 설명에 해당하는 용어를 직접 쓰거나 보기에서 선택"}
+    types:[["bank","보기 골라쓰기"]],
+    info:"2차 대비: 설명을 보고 보기에서 알맞은 용어 선택 · 전체 개념 출제 · 합격 60%"}
 };
 let quiz={exam:"1",type:"mc_d2t",len:10,set:[],idx:0,summary:false,_sig:""};
 const QUIZ_LENS=[10,20,30];
@@ -522,16 +535,34 @@ function quizPool(){return poolByScope();}
 function resetQuiz(){quiz.set=[];quiz.idx=0;quiz.summary=false;quiz._sig="";}
 function qsig(){return quiz.exam+"|"+quiz.type+"|"+selSig()+"|"+quiz.len;}
 function pick(pool,n,exclude){return shuffle(pool.filter(c=>!exclude||(c.term!==exclude.term&&c.def!==exclude.def))).slice(0,n);}
+/* 보기(오답) 생성: 같은 섹션→같은 단원→전체 순으로 주제가 가까운 것을 우선,
+   정답과 용어·정의 중복 및 보기 간 용어 중복을 배제 */
+function pickDistractors(pool,n,c){
+  const used=new Set([c.term]); const out=[];
+  const add=arr=>{for(const x of shuffle(arr)){if(out.length>=n)break;
+    if(x.term===c.term||x.def===c.def||used.has(x.term))continue;used.add(x.term);out.push(x);}};
+  add(pool.filter(x=>x.sec&&x.sec===c.sec));
+  if(out.length<n) add(pool.filter(x=>x.unit&&x.unit===c.unit));
+  if(out.length<n) add(pool);
+  return out;
+}
 function makeQ(type,c,pool){
-  if(type==="match"){const set=pick(pool,4);return{type,kind:"match",set,order:shuffle(set.map((_,i)=>i)),sel:{},done:false};}
-  if(type==="ox"){const t=Math.random()<0.5;let shown=c;if(!t){const o=pick(pool,1,c)[0];shown={term:c.term,def:o.def};}return{type,kind:"ox",concept:c,shown,isTrue:t,done:false};}
-  if(type==="bank"){const opts=shuffle([c,...pick(pool,9,c)]);return{type,kind:"bank",concept:c,options:opts,answer:opts.indexOf(c),done:false};}
+  if(type==="match"){
+    const grp=pool.filter(x=>x.sec&&x.sec===c.sec);
+    const set=grp.length>=4?shuffle(grp).slice(0,4):shuffle([c,...pickDistractors(pool,3,c)]).slice(0,4);
+    return{type,kind:"match",set,order:shuffle(set.map((_,i)=>i)),sel:{},done:false};}
+  if(type==="ox"){const t=Math.random()<0.5;let shown=c;
+    if(!t){const o=pickDistractors(pool,1,c)[0];if(o)shown={term:c.term,def:o.def};else return makeQ(type,c,pool);}
+    return{type,kind:"ox",concept:c,shown,isTrue:t,done:false};}
+  if(type==="bank"){const opts=shuffle([c,...pickDistractors(pool,9,c)]);return{type,kind:"bank",concept:c,options:opts,answer:opts.indexOf(c),done:false};}
   if(type==="short"||type==="fill"){return{type,kind:"short",concept:c,done:false};}
-  const opts=shuffle([c,...pick(pool,3,c)]);return{type,kind:"mc",concept:c,options:opts,answer:opts.indexOf(c),done:false};
+  const opts=shuffle([c,...pickDistractors(pool,3,c)]);return{type,kind:"mc",concept:c,options:opts,answer:opts.indexOf(c),done:false};
 }
 function genSet(){
-  const pool=quizPool(), uniq=shuffle(pool); quiz.set=[]; quiz.idx=0; quiz.summary=false;
-  for(let i=0;i<quiz.len;i++){quiz.set.push(makeQ(quiz.type,uniq[i%uniq.length],pool));}
+  const pool=quizPool(), uniq=shuffle(pool);
+  quiz.len=uniq.length;
+  quiz.set=[]; quiz.idx=0; quiz.summary=false;
+  for(let i=0;i<quiz.len;i++){quiz.set.push(makeQ(quiz.type,uniq[i],pool));}
   quiz._sig=qsig();
 }
 function quizScore(){const d=quiz.set.filter(q=>q.done);return{answered:d.length,correct:d.filter(q=>q.correct).length};}
@@ -540,9 +571,10 @@ function renderQuiz(){
   const ex=EXAMS[quiz.exam];
   if(!ex.types.some(t=>t[0]===quiz.type)) quiz.type=ex.types[0][0];
   const need = quiz.type==="match"?4:(quiz.type==="bank"||quiz.type==="fill"?6:(quiz.type==="short"?1:4));
-  const head=`<div class="quiz-head">
-    <div class="seg typeseg">${ex.types.map(t=>`<button data-type="${t[0]}" class="${quiz.type===t[0]?'active':''}">${t[1]}</button>`).join("")}</div></div>
-    <div class="quiz-head"><div class="seg">${QUIZ_LENS.map(n=>`<button data-len="${n}" class="${quiz.len===n?'active':''}">${n}문항</button>`).join("")}</div>
+  const typeseg = ex.types.length>1
+    ? `<div class="seg typeseg">${ex.types.map(t=>`<button data-type="${t[0]}" class="${quiz.type===t[0]?'active':''}">${t[1]}</button>`).join("")}</div>`
+    : "";
+  const head=`<div class="quiz-head">${typeseg}
     <div class="examinfo" style="margin:0;flex:1">📋 ${ex.info}</div></div>`;
   if(pool.length<need){
     $("#view").innerHTML=`<div class="quiz">${head}<div class="empty">이 유형에는 개념이 ${need}개 이상 필요합니다. 좌측에서 과목을 더 선택하세요.</div></div>`;
@@ -579,7 +611,6 @@ function renderQuizSummary(head){
 }
 function bindQuizControls(){
   $$("[data-type]").forEach(b=>b.onclick=()=>{quiz.type=b.dataset.type;resetQuiz();renderQuiz();});
-  $$("[data-len]").forEach(b=>b.onclick=()=>{quiz.len=+b.dataset.len;resetQuiz();renderQuiz();});
 }
 function bindNav(){
   const p=$("#qprev"),n=$("#qnext"),ns=$("#newset");
@@ -694,13 +725,13 @@ function renderExamSetup(){
 function genExam(){
   const pool=shuffle(poolByScope());
   const n=Math.min(exam.count,pool.length);
-  const types=exam.exam==="1"?["mc_d2t","mc_t2d","ox","short"]:["short","bank","fill"];
+  const types=exam.exam==="1"?["mc_d2t","ox","short"]:["bank"];
   exam.qs=[];exam.ans={};
   for(let i=0;i<n;i++){
     const c=pool[i], type=types[i%types.length];
-    if(type==="mc_d2t"||type==="mc_t2d"){const opts=shuffle([c,...pick(pool,3,c)]);exam.qs.push({type,c,opts,ans:opts.indexOf(c)});}
-    else if(type==="ox"){const t=Math.random()<0.5;let shown=c;if(!t){const o=pick(pool,1,c)[0];shown={term:c.term,def:o.def};}exam.qs.push({type,c,shown,isTrue:t});}
-    else if(type==="bank"){const opts=shuffle([c,...pick(pool,7,c)]);exam.qs.push({type,c,opts,ans:opts.indexOf(c)});}
+    if(type==="mc_d2t"||type==="mc_t2d"){const opts=shuffle([c,...pickDistractors(pool,3,c)]);exam.qs.push({type,c,opts,ans:opts.indexOf(c)});}
+    else if(type==="ox"){let t=Math.random()<0.5;let shown=c;if(!t){const o=pickDistractors(pool,1,c)[0];if(o)shown={term:c.term,def:o.def};else t=true;}exam.qs.push({type,c,shown,isTrue:t});}
+    else if(type==="bank"){const opts=shuffle([c,...pickDistractors(pool,7,c)]);exam.qs.push({type,c,opts,ans:opts.indexOf(c)});}
     else exam.qs.push({type,c});
   }
 }
@@ -776,31 +807,6 @@ function renderExamReview(){
 }
 
 /* ---------- 진도 대시보드 ---------- */
-function poolAll(){let a=[];STUDY_DATA.subjects.forEach((s,i)=>a=a.concat(conceptsOf(i)));return a;}
-function renderDash(){
-  const all=poolAll(), total=all.length, learned=all.filter(c=>isLearned(c.id)).length;
-  const pct=total?Math.round(learned/total*100):0;
-  const pr=stats.practice, fq=stats.flashq;
-  const pacc=pr.total?Math.round(pr.correct/pr.total*100):0, facc=fq.total?Math.round(fq.correct/fq.total*100):0;
-  const cards=`<div class="stat-grid">
-    <div class="stat"><div class="lbl">전체 개념 암기</div><div class="val">${pct}%</div><div class="sub">${learned} / ${total}개</div></div>
-    <div class="stat"><div class="lbl">퀴즈 정답률</div><div class="val">${pacc}%</div><div class="sub">${pr.correct}/${pr.total} 문항</div></div>
-    <div class="stat"><div class="lbl">플래시카드(퀴즈)</div><div class="val">${facc}%</div><div class="sub">${fq.correct}/${fq.total} 문항</div></div>
-    <div class="stat"><div class="lbl">모의고사 응시</div><div class="val">${stats.exams.length}</div><div class="sub">최근 기록</div></div></div>`;
-  const subjRows=STUDY_DATA.subjects.map((s,i)=>{
-    const cs=conceptsOf(i), d=cs.filter(c=>isLearned(c.id)).length, p=cs.length?Math.round(d/cs.length*100):0;
-    return `<div class="prow"><span class="nm">${esc(s.title)}</span><span class="bar2"><i style="width:${p}%"></i></span><span class="pc">${d}/${cs.length} (${p}%)</span></div>`;
-  }).join("");
-  const hist=stats.exams.length?stats.exams.map(e=>{const p=Math.round(e.correct/e.total*100);
-    return `<div class="hrow"><span>${e.date} · ${e.exam}차 · ${e.scope==='all'?'전체':esc(String(e.scope))}</span><span><b style="color:${p>=60?'var(--ok)':'var(--bad)'}">${p}점</b> (${e.correct}/${e.total})</span></div>`;}).join("")
-    :'<div style="color:var(--muted);font-size:13px">아직 모의고사 기록이 없습니다.</div>';
-  $("#view").innerHTML=`<div class="dash">${cards}
-    <div class="panel-box"><h3>과목별 개념 암기 진도</h3>${subjRows}</div>
-    <div class="panel-box"><h3>모의고사 이력</h3><div class="hist">${hist}</div></div>
-    <div class="opt-row"><button class="btn" id="resetStats">학습 통계 초기화</button></div></div>`;
-  $("#resetStats").onclick=()=>{if(confirm('퀴즈·플래시카드·모의고사 통계를 초기화할까요? (개념 암기 표시는 유지)')){stats={practice:{total:0,correct:0},flashq:{total:0,correct:0},exams:[]};saveS();renderDash();}};
-}
-
 /* ---------- 유틸 ---------- */
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
 /* ---------- 이벤트 ---------- */
