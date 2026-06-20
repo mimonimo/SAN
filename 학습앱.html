@@ -698,7 +698,7 @@ function checkAnswer(input,term){
 }
 
 /* ---------- 모의고사 (공식 문항수 이상 생성 → 채점 → 풀이보기) ---------- */
-let exam={exam:"1",count:50,started:false,submitted:false,qs:[],ans:{},result:null};
+let exam={exam:"1",count:50,full:false,started:false,submitted:false,qs:[],ans:{},result:null};
 const EXAM_COUNTS={"1":[40,50,60],"2":[20,30,40]};
 const TYPE_LABEL={mc_d2t:"4지택일",mc_t2d:"4지택일",ox:"진위형 O/X",short:"단답형",bank:"보기선택",fill:"괄호채우기"};
 function renderExam(){
@@ -709,22 +709,25 @@ function renderExam(){
 }
 function renderExamSetup(){
   const counts=EXAM_COUNTS[exam.exam];
+  const total=poolByScope().length;
   $("#view").innerHTML=`<div class="exam-setup"><div class="card-box">
     <h2 style="margin:0 0 6px">🧪 모의고사</h2>
-    <p style="color:var(--muted);font-size:13px;margin:0 0 14px">개념정리 자료에서 자동 출제됩니다. 공식(1차 40·2차 20)보다 많이 풀 수 있고, 제출하면 점수와 풀이를 볼 수 있습니다.</p>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 14px">선택한 과목의 개념정리 자료에서 자동 출제됩니다. 제출하면 점수와 풀이를 볼 수 있습니다.</p>
     <div class="seg" style="display:inline-flex;margin-bottom:6px">
       <button data-ex="1" class="${exam.exam==='1'?'active':''}">1차 모의(객관식+단답)</button>
       <button data-ex="2" class="${exam.exam==='2'?'active':''}">2차 모의(필답형)</button></div>
-    <div class="opt-row">문항수 ${counts.map(c=>`<button class="chip ${exam.count===c?'active':''}" data-cnt="${c}">${c}문항</button>`).join("")}</div>
-    <div style="font-size:12px;color:var(--muted);margin:4px 0 14px">출제 범위: 좌측에서 선택한 ${selIdx().length}개 과목 · 개념 ${poolByScope().length}개 · 60점 이상이 합격선</div>
+    <div class="opt-row">분량
+      <button class="chip ${exam.full?'active':''}" data-cnt="all">전체 (${total}문항)</button>
+      ${counts.map(c=>`<button class="chip ${!exam.full&&exam.count===c?'active':''}" data-cnt="${c}">${c}문항</button>`).join("")}</div>
+    <div style="font-size:12px;color:var(--muted);margin:4px 0 14px">출제 범위: 선택한 ${selIdx().length}개 과목 · 개념 ${total}개 · 60점 이상이 합격선</div>
     <button class="btn primary" id="startExam">시험 시작 →</button></div></div>`;
   $$("[data-ex]").forEach(b=>b.onclick=()=>{exam.exam=b.dataset.ex;renderExam();});
-  $$("[data-cnt]").forEach(b=>b.onclick=()=>{exam.count=+b.dataset.cnt;renderExam();});
+  $$("[data-cnt]").forEach(b=>b.onclick=()=>{if(b.dataset.cnt==="all"){exam.full=true;}else{exam.full=false;exam.count=+b.dataset.cnt;}renderExam();});
   $("#startExam").onclick=()=>{genExam();exam.started=true;exam.submitted=false;renderExam();};
 }
 function genExam(){
   const pool=shuffle(poolByScope());
-  const n=Math.min(exam.count,pool.length);
+  const n=exam.full?pool.length:Math.min(exam.count,pool.length);
   const types=exam.exam==="1"?["mc_d2t","ox","short"]:["bank"];
   exam.qs=[];exam.ans={};
   for(let i=0;i<n;i++){
@@ -811,7 +814,8 @@ function renderExamReview(){
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
 /* ---------- 이벤트 ---------- */
 $$(".tab").forEach(t=>t.onclick=()=>{if(state.sel.length===0)return;state.mode=t.dataset.mode;render();});
-$("#search").oninput=e=>{state.query=e.target.value.trim();if(state.sel.length===0)return;if(state.mode!=="concept"){state.mode="concept";}render();};
+$("#search").oninput=e=>{state.query=e.target.value.trim();if(state.sel.length===0)return;
+  if(state.mode==="concept"&&$("#view")){renderBrowse();}else{state.mode="concept";render();}};
 $("#menuBtn").onclick=()=>{state.mode="landing";render();};
 $("#resetBtn").onclick=()=>{if(confirm("학습 진도를 모두 초기화할까요?")){progress={};saveP();render();}};
 const THEMEKEY="secstudy_theme";
