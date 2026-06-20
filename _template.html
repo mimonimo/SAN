@@ -320,7 +320,7 @@
 <script>
 const STUDY_DATA = __STUDY_DATA__;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const state={sel:[],catFilter:-1,mode:"landing",drill:"flash",query:"",sideHidden:localStorage.getItem("secstudy_sidehidden")==="1"};
+const state={sel:[],catFilter:-1,mode:"landing",drill:"flash",query:"",sideHidden:localStorage.getItem("secstudy_sidehidden")!=="0"};
 function selIdx(){return state.sel.slice().sort((a,b)=>a-b);}
 function selSig(){return selIdx().join(',');}
 
